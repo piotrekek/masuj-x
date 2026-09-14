@@ -1,0 +1,147 @@
+body {
+    font-family: 'Dosis', sans-serif;
+    background-color: #0a0a0a; /* Gleboka czern */
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    color: #ffffff;
+}
+
+#app {
+    width: 100%;
+    max-width: 600px;
+}
+
+header h1 {
+    text-align: center;
+    font-size: 3.5rem;
+    color: #ff8c00; /* Mocny pomarancz */
+    text-shadow: 2px 2px 0px #000, 4px 4px 0px #cc7000;
+    margin-bottom: 30px;
+}
+
+.cartoon-box {
+    background-color: #1a1a1a;
+    border: 3px solid #ff8c00;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 6px 6px 0px #ff8c00;
+    margin-bottom: 20px;
+}
+
+input, textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: #2a2a2a;
+    color: #ffffff;
+    border: 2px solid #ff8c00;
+    border-radius: 10px;
+    font-family: 'Dosis', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    outline: none;
+}
+
+input::placeholder, textarea::placeholder {
+    color: #888;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+button {
+    background-color: #ff8c00;
+    color: #000000;
+    font-family: 'Dosis', sans-serif;
+    font-weight: 700;
+    font-size: 1.2rem;
+    padding: 10px 20px;
+    border: 2px solid #ff8c00;
+    border-radius: 10px;
+    box-shadow: 4px 4px 0px #cc7000;
+    cursor: pointer;
+    transition: all 0.1s;
+    width: 100%;
+}
+
+button:active {
+    box-shadow: 0px 0px 0px #cc7000;
+    transform: translate(4px, 4px);
+}
+
+#back-btn {
+    background-color: #333;
+    color: #ff8c00;
+    border-color: #ff8c00;
+    box-shadow: 4px 4px 0px #000;
+    margin-bottom: 15px;
+}
+
+#back-btn:active {
+    box-shadow: 0px 0px 0px #000;
+}
+
+.thread-item {
+    background-color: #1a1a1a;
+    border: 3px solid #ff8c00;
+    border-radius: 15px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 5px 5px 0px #ff8c00;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.thread-item:hover {
+    background-color: #222;
+}
+
+.thread-item h3 {
+    color: #ff8c00;
+    margin-top: 0;
+}
+
+.post-item {
+    padding: 15px;
+    border: 2px solid #ff8c00;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    background-color: #222;
+    font-weight: 700;
+    color: #fff;
+    word-wrap: break-word;
+}
+
+/* Style dla przycisku lajkowania */
+.post-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+.like-btn {
+    background-color: transparent;
+    border: 2px solid #ff8c00;
+    color: #ff8c00;
+    width: auto;
+    padding: 5px 15px;
+    font-size: 1rem;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.like-btn:hover {
+    background-color: #333;
+}
+
+.like-btn.liked {
+    background-color: #ff8c00;
+    color: #000;
+}
