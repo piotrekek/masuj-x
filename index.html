@@ -4,20 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>masuj x</title>
-    <link href="https://fonts.googleapis.com/css2?family=Dosis:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dosis:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Rozmyte plamy w tle (Ambient) -->
+    <div class="ambient-light light-1"></div>
+    <div class="ambient-light light-2"></div>
+
     <div id="app">
         <header>
             <h1>masuj x</h1>
         </header>
 
         <!-- Ekran Logowania -->
-        <div id="login-screen" class="panel fade-in">
+        <div id="login-screen" class="panel fade-in glass">
             <h2>Podaj hasło</h2>
             <input type="password" id="password-input" placeholder="Hasło...">
-            <button id="login-btn">Zaloguj</button>
+            <button id="login-btn" class="glow-btn">Zaloguj</button>
             <p id="login-error" style="display: none;">Nieprawidłowe hasło</p>
         </div>
 
@@ -25,18 +29,18 @@
         <div id="threads-screen" style="display: none;" class="fade-in">
             <div class="threads-header">
                 <h2>Wątki</h2>
-                <button id="show-new-thread-btn" class="icon-btn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <button id="show-new-thread-btn" class="icon-btn secondary-btn glass">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     Nowy wątek
                 </button>
             </div>
 
-            <div id="new-thread-box" class="panel hidden">
+            <div id="new-thread-box" class="panel glass hidden">
                 <input type="text" id="new-thread-title" class="dosis-text" placeholder="Tytuł wątku...">
                 <textarea id="new-thread-desc" class="dosis-text" placeholder="Opis..." rows="2"></textarea>
                 <div class="action-buttons">
                     <button id="cancel-thread-btn" class="secondary-btn">Anuluj</button>
-                    <button id="create-thread-btn">Utwórz</button>
+                    <button id="create-thread-btn" class="glow-btn">Utwórz</button>
                 </div>
             </div>
 
@@ -45,9 +49,9 @@
 
         <!-- Ekran Wątku (Czat) -->
         <div id="chat-screen" style="display: none;" class="fade-in chat-container">
-            <div class="chat-header">
+            <div class="chat-header panel glass">
                 <button id="back-btn" class="icon-btn secondary-btn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
                     Wróć
                 </button>
                 <div class="chat-info">
@@ -58,9 +62,9 @@
             
             <div id="posts-list"></div>
 
-            <div class="input-area panel">
+            <div class="input-area panel glass">
                 <textarea id="new-post-content" class="dosis-text" placeholder="Napisz anonimowo..."></textarea>
-                <button id="send-post-btn">Wyślij</button>
+                <button id="send-post-btn" class="glow-btn">Wyślij</button>
             </div>
         </div>
     </div>
