@@ -1,11 +1,29 @@
+/* Czcionka interfejsu Apple + Kolory */
+:root {
+    --bg-color: #000000;
+    --panel-bg: #1c1c1e;
+    --accent: #ff9f0a; /* Subtelny, applowski pomarańczowy */
+    --accent-hover: #e08c09;
+    --text-main: #ffffff;
+    --text-muted: #8e8e93;
+    --border-color: #2c2c2e;
+}
+
 body {
-    font-family: 'Dosis', sans-serif;
-    background-color: #0a0a0a; /* Gleboka czern */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-main);
     margin: 0;
-    padding: 20px;
+    padding: 20px 15px;
     display: flex;
     justify-content: center;
-    color: #ffffff;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Klasa dla czcionki Dosis (tylko do tresci wpisywanych) */
+.dosis-text {
+    font-family: 'Dosis', sans-serif;
+    letter-spacing: 0.5px;
 }
 
 #app {
@@ -15,133 +33,177 @@ body {
 
 header h1 {
     text-align: center;
-    font-size: 3.5rem;
-    color: #ff8c00; /* Mocny pomarancz */
-    text-shadow: 2px 2px 0px #000, 4px 4px 0px #cc7000;
+    font-size: 2rem;
+    font-weight: 600;
     margin-bottom: 30px;
+    letter-spacing: -0.5px;
 }
 
-.cartoon-box {
-    background-color: #1a1a1a;
-    border: 3px solid #ff8c00;
-    border-radius: 15px;
+/* Panele i formularze */
+.panel {
+    background-color: var(--panel-bg);
+    border-radius: 18px;
     padding: 20px;
-    box-shadow: 6px 6px 0px #ff8c00;
     margin-bottom: 20px;
+}
+
+.hidden {
+    display: none !important;
 }
 
 input, textarea {
     width: 100%;
     box-sizing: border-box;
-    padding: 15px;
-    margin-bottom: 15px;
-    background-color: #2a2a2a;
-    color: #ffffff;
-    border: 2px solid #ff8c00;
-    border-radius: 10px;
-    font-family: 'Dosis', sans-serif;
-    font-size: 1.1rem;
-    font-weight: 700;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    background-color: #2c2c2e;
+    color: var(--text-main);
+    border: none;
+    border-radius: 12px;
+    font-size: 1.05rem;
     outline: none;
+    transition: background-color 0.2s ease;
+}
+
+input:focus, textarea:focus {
+    background-color: #3a3a3c;
 }
 
 input::placeholder, textarea::placeholder {
-    color: #888;
+    color: var(--text-muted);
 }
 
 textarea {
-    resize: vertical;
+    resize: none;
     min-height: 80px;
 }
 
+/* Przyciski */
 button {
-    background-color: #ff8c00;
-    color: #000000;
-    font-family: 'Dosis', sans-serif;
-    font-weight: 700;
-    font-size: 1.2rem;
-    padding: 10px 20px;
-    border: 2px solid #ff8c00;
-    border-radius: 10px;
-    box-shadow: 4px 4px 0px #cc7000;
+    background-color: var(--accent);
+    color: #000;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 12px;
     cursor: pointer;
-    transition: all 0.1s;
+    transition: all 0.2s ease;
     width: 100%;
 }
 
-button:active {
-    box-shadow: 0px 0px 0px #cc7000;
-    transform: translate(4px, 4px);
-}
+button:hover { background-color: var(--accent-hover); }
+button:active { transform: scale(0.97); }
 
-#back-btn {
-    background-color: #333;
-    color: #ff8c00;
-    border-color: #ff8c00;
-    box-shadow: 4px 4px 0px #000;
-    margin-bottom: 15px;
+.secondary-btn {
+    background-color: #3a3a3c;
+    color: var(--text-main);
 }
+.secondary-btn:hover { background-color: #4a4a4c; }
 
-#back-btn:active {
-    box-shadow: 0px 0px 0px #000;
-}
-
-.thread-item {
-    background-color: #1a1a1a;
-    border: 3px solid #ff8c00;
-    border-radius: 15px;
-    padding: 15px;
-    margin-bottom: 15px;
-    box-shadow: 5px 5px 0px #ff8c00;
-    cursor: pointer;
-    transition: transform 0.1s;
-}
-
-.thread-item:hover {
-    background-color: #222;
-}
-
-.thread-item h3 {
-    color: #ff8c00;
-    margin-top: 0;
-}
-
-.post-item {
-    padding: 15px;
-    border: 2px solid #ff8c00;
-    border-radius: 10px;
-    margin-bottom: 15px;
-    background-color: #222;
-    font-weight: 700;
-    color: #fff;
-    word-wrap: break-word;
-}
-
-/* Style dla przycisku lajkowania */
-.post-footer {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 10px;
-}
-
-.like-btn {
-    background-color: transparent;
-    border: 2px solid #ff8c00;
-    color: #ff8c00;
-    width: auto;
-    padding: 5px 15px;
-    font-size: 1rem;
-    box-shadow: none;
+.icon-btn {
     display: flex;
     align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: auto;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+/* Nagłówek Wątków */
+.threads-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.threads-header h2 { margin: 0; font-weight: 600; }
+
+/* Lista Wątków */
+.thread-item {
+    background-color: var(--panel-bg);
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.thread-item:hover { background-color: #242426; }
+.thread-item:active { transform: scale(0.98); }
+.thread-item h3 { margin: 0 0 5px 0; font-size: 1.2rem; font-weight: 500; }
+.thread-item p { margin: 0; color: var(--text-muted); font-size: 0.95rem; }
+
+/* Czat i Wiadomości (Dymki) */
+.chat-container { display: flex; flex-direction: column; height: 90vh; }
+.chat-header { margin-bottom: 20px; }
+.chat-info { margin-top: 15px; }
+.chat-info h2 { margin: 0; font-weight: 500; font-size: 1.3rem; }
+.chat-info p { margin: 5px 0 0 0; color: var(--text-muted); font-size: 0.95rem; }
+
+#posts-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-bottom: 20px;
+    /* Ukrycie paska przewijania dla czystosci */
+    scrollbar-width: none; 
+}
+#posts-list::-webkit-scrollbar { display: none; }
+
+.post-item {
+    max-width: 80%; /* Dymek dopasowuje się do tekstu, ale max 80% ekranu */
+    width: fit-content;
+    padding: 12px 16px;
+    border-radius: 18px;
+    background-color: #2c2c2e;
+    font-size: 1.05rem;
+    line-height: 1.4;
+    position: relative;
+    animation: slideUp 0.3s ease-out;
+}
+
+.post-content { word-wrap: break-word; }
+
+/* Lajki */
+.like-btn {
+    background: transparent;
+    color: var(--text-muted);
+    padding: 4px 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
     gap: 5px;
+    width: auto;
+    margin-top: 6px;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+}
+.like-btn svg { width: 14px; height: 14px; transition: fill 0.2s; }
+.like-btn:hover { color: var(--text-main); background: #3a3a3c; }
+
+.like-btn.liked { color: var(--accent); }
+.like-btn.liked svg { fill: var(--accent); }
+
+/* Błędy */
+#login-error { color: #ff453a; text-align: center; margin-top: 10px; font-weight: 500; }
+
+/* Subtelne Animacje */
+.fade-in { animation: fadeIn 0.4s ease-out; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-.like-btn:hover {
-    background-color: #333;
-}
-
-.like-btn.liked {
-    background-color: #ff8c00;
-    color: #000;
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }

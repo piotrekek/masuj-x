@@ -24,19 +24,16 @@ if (!myUserId) {
     localStorage.setItem('masuj_x_user_id', myUserId);
 }
 
+// Generuje estetyczny kolor w palecie HSL dla Dark Mode
 function generateColor(userId, threadId) {
     const str = userId + threadId;
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
         hash = str.charCodeAt(i) + ((hash << 5) - hash);
     }
-    let color = '#';
-    for (let i = 0; i < 3; i++) {
-        let value = (hash >> (i * 8)) & 0xFF;
-        value = Math.min(255, value + 80); 
-        color += ('00' + value.toString(16)).substr(-2);
-    }
-    return color;
+    const h = Math.abs(hash) % 360; // Odcień (Hue)
+    // S: 70%, L: 65% - idealne, łagodne pastelowe kolory dla czarnego tła
+    return `hsl(${h}, 70%, 65%)`; 
 }
 
 const loginScreen = document.getElementById('login-screen');
@@ -44,6 +41,8 @@ const threadsScreen = document.getElementById('threads-screen');
 const chatScreen = document.getElementById('chat-screen');
 const threadsList = document.getElementById('threads-list');
 const postsList = document.getElementById('posts-list');
+const newThreadBox = document.getElementById('new-thread-box');
+
 let currentThreadId = null;
 let unsubscribePosts = null;
 
@@ -58,7 +57,18 @@ document.getElementById('login-btn').addEventListener('click', () => {
     }
 });
 
-// Tworzenie watku
+// UI Nowego Wątku
+document.getElementById('show-new-thread-btn').addEventListener('click', () => {
+    newThreadBox.classList.remove('hidden');
+    document.getElementById('show-new-thread-btn').style.display = 'none';
+});
+
+document.getElementById('cancel-thread-btn').addEventListener('click', () => {
+    newThreadBox.classList.add('hidden');
+    document.getElementById('show-new-thread-btn').style.display = 'flex';
+});
+
+// Tworzenie wątku
 document.getElementById('create-thread-btn').addEventListener('click', async () => {
     const title = document.getElementById('new-thread-title').value;
     const desc = document.getElementById('new-thread-desc').value;
@@ -69,11 +79,14 @@ document.getElementById('create-thread-btn').addEventListener('click', async () 
         description: desc,
         createdAt: serverTimestamp()
     });
+    
     document.getElementById('new-thread-title').value = '';
     document.getElementById('new-thread-desc').value = '';
+    newThreadBox.classList.add('hidden');
+    document.getElementById('show-new-thread-btn').style.display = 'flex';
 });
 
-// Ladowanie watkow
+// Ładowanie wątków
 function loadThreads() {
     const q = query(collection(db, "threads"), orderBy("createdAt", "desc"));
     onSnapshot(q, (snapshot) => {
@@ -81,26 +94,22 @@ function loadThreads() {
         snapshot.forEach((doc) => {
             const data = doc.data();
             const div = document.createElement('div');
-            div.className = 'thread-item';
-            div.innerHTML = `<h3>${data.title}</h3><p>${data.description}</p>`;
+            div.className = 'thread-item fade-in';
+            div.innerHTML = `<h3 class="dosis-text">${data.title}</h3><p class="dosis-text">${data.description}</p>`;
             div.onclick = () => openThread(doc.id, data.title, data.description);
             threadsList.appendChild(div);
         });
     });
 }
 
-// Otwieranie watku
+// Otwieranie wątku
 function openThread(threadId, title, desc) {
     currentThreadId = threadId;
     threadsScreen.style.display = 'none';
-    chatScreen.style.display = 'block';
+    chatScreen.style.display = 'flex';
     document.getElementById('current-thread-title').innerText = title;
     document.getElementById('current-thread-desc').innerText = desc;
     
-    const myColorInThisThread = generateColor(myUserId, currentThreadId);
-    document.getElementById('new-post-content').style.borderColor = myColorInThisThread;
-    document.getElementById('new-post-content').placeholder = `Twoj kolor w tym watku to ${myColorInThisThread}`;
-
     const q = query(collection(db, `threads/${threadId}/posts`), orderBy("createdAt", "asc"));
     
     if (unsubscribePosts) unsubscribePosts(); 
@@ -111,46 +120,56 @@ function openThread(threadId, title, desc) {
             const data = docSnap.data();
             const div = document.createElement('div');
             div.className = 'post-item';
-            div.style.borderColor = data.color;
-            // Delikatne podswietlenie tla postu w kolorze usera
-            div.style.backgroundColor = data.color + '20'; 
             
-            // Logika lajkow
+            // Subtelny znacznik koloru (mała kropka/kreska, albo po prostu podświetlony tekst kropki)
+            // Zastosujemy delikatny border po lewej stronie zamiast całego tła, w stylu minimalistycznym
+            div.style.borderLeft = `4px solid ${data.color}`;
+            
             const likesArray = data.likes || [];
             const hasLiked = likesArray.includes(myUserId);
             const likesCount = likesArray.length;
 
             div.innerHTML = `
-                <div><span style="color:${data.color}; font-size:1.5em; text-shadow: 1px 1px 0px #000;">☻</span> ${data.text}</div>
-                <div class="post-footer">
-                    <button class="like-btn ${hasLiked ? 'liked' : ''}" data-id="${docSnap.id}" data-liked="${hasLiked}">
-                        🔥 ${likesCount}
-                    </button>
-                </div>
+                <div class="post-content dosis-text">${data.text}</div>
+                <button class="like-btn ${hasLiked ? 'liked' : ''}" data-id="${docSnap.id}">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                    </svg>
+                    ${likesCount}
+                </button>
             `;
             postsList.appendChild(div);
         });
         
-        // Podpiecie eventow pod przyciski lajkow
-        document.querySelectorAll('.like-btn').forEach(btn => {
-            btn.onclick = async () => {
-                const postId = btn.getAttribute('data-id');
-                const isLiked = btn.getAttribute('data-liked') === 'true';
-                const postRef = doc(db, `threads/${currentThreadId}/posts`, postId);
-                
-                if (isLiked) {
-                    await updateDoc(postRef, { likes: arrayRemove(myUserId) });
-                } else {
-                    await updateDoc(postRef, { likes: arrayUnion(myUserId) });
-                }
-            };
-        });
-
         postsList.scrollTop = postsList.scrollHeight; 
     });
 }
 
-// Powrot do listy
+// Event Delegation do Lajków (Rozwiązuje problem z niedziałającym klikaniem)
+postsList.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.like-btn');
+    if (!btn || !currentThreadId) return;
+
+    const postId = btn.getAttribute('data-id');
+    const isLiked = btn.classList.contains('liked');
+    const postRef = doc(db, `threads/${currentThreadId}/posts`, postId);
+    
+    // Zapobiega "spamowaniu" przycisku
+    btn.disabled = true; 
+    
+    try {
+        if (isLiked) {
+            await updateDoc(postRef, { likes: arrayRemove(myUserId) });
+        } else {
+            await updateDoc(postRef, { likes: arrayUnion(myUserId) });
+        }
+    } catch (error) {
+        console.error("Błąd lajkowania:", error);
+        btn.disabled = false;
+    }
+});
+
+// Powrót do listy
 document.getElementById('back-btn').addEventListener('click', () => {
     chatScreen.style.display = 'none';
     threadsScreen.style.display = 'block';
@@ -164,12 +183,14 @@ document.getElementById('send-post-btn').addEventListener('click', async () => {
     if (text.trim() === '' || !currentThreadId) return;
 
     const myColorInThisThread = generateColor(myUserId, currentThreadId);
-
+    
+    const input = document.getElementById('new-post-content');
+    input.value = ''; // Od razu czyścimy, żeby UX był płynny
+    
     await addDoc(collection(db, `threads/${currentThreadId}/posts`), {
         text: text,
         color: myColorInThisThread,
-        likes: [], // Pusta tablica na start
+        likes: [], 
         createdAt: serverTimestamp()
     });
-    document.getElementById('new-post-content').value = '';
 });
