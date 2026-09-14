@@ -43,7 +43,6 @@ body {
     right: -100px;
 }
 
-/* Klasa dla czcionki Dosis */
 .dosis-text {
     font-family: 'Dosis', sans-serif;
     letter-spacing: 0.5px;
@@ -72,7 +71,7 @@ header h1 {
     background-color: var(--panel-bg);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--border-color); /* Mikroramka */
+    border: 1px solid var(--border-color); 
     border-radius: 20px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
@@ -120,7 +119,7 @@ button {
     width: 100%;
 }
 
-button:active { transform: scale(0.95); } /* Mocniejsze, sprężyste wciśnięcie */
+button:active { transform: scale(0.95); } 
 
 .glow-btn {
     background-color: var(--accent);
@@ -149,7 +148,7 @@ button:active { transform: scale(0.95); } /* Mocniejsze, sprężyste wciśnięci
 
 .action-buttons { display: flex; gap: 10px; }
 
-/* Lista Wątków */
+/* Lista Wątków - POPRAWIONA WIDOCZNOŚĆ */
 .threads-header {
     display: flex;
     justify-content: space-between;
@@ -164,8 +163,8 @@ button:active { transform: scale(0.95); } /* Mocniejsze, sprężyste wciśnięci
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--border-color);
     border-radius: 18px;
-    padding: 18px 22px;
-    margin-bottom: 12px;
+    padding: 20px 22px;
+    margin-bottom: 15px;
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
@@ -175,15 +174,41 @@ button:active { transform: scale(0.95); } /* Mocniejsze, sprężyste wciśnięci
     box-shadow: 0 6px 15px rgba(0,0,0,0.3);
 }
 .thread-item:active { transform: scale(0.97); }
-.thread-item h3 { margin: 0 0 6px 0; font-size: 1.3rem; font-weight: 500; }
-.thread-item p { margin: 0; color: var(--text-muted); font-size: 1rem; }
 
-/* Czat */
+/* Tytuł wątku na liście */
+.thread-item h3 { 
+    margin: 0 0 8px 0; 
+    font-size: 1.45rem; 
+    font-weight: 700; 
+    color: var(--accent); 
+    text-shadow: 0 2px 10px rgba(255, 159, 10, 0.15);
+}
+/* Podtemat / Opis na liście - Bardziej widoczny */
+.thread-item p { 
+    margin: 0; 
+    color: #f5f5f7; /* Jasny szary, prawie biały */
+    font-size: 1.15rem; 
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+/* Czat i Nagłówek Czatu - POPRAWIONA WIDOCZNOŚĆ */
 .chat-container { display: flex; flex-direction: column; height: 90vh; }
 .chat-header { margin-bottom: 20px; padding: 18px; }
 .chat-info { margin-top: 15px; }
-.chat-info h2 { margin: 0; font-weight: 500; font-size: 1.4rem; }
-.chat-info p { margin: 5px 0 0 0; color: var(--text-muted); font-size: 1rem; }
+.chat-info h2 { 
+    margin: 0; 
+    font-weight: 700; 
+    font-size: 1.6rem; 
+    color: var(--accent);
+}
+.chat-info p { 
+    margin: 8px 0 0 0; 
+    color: #f5f5f7; 
+    font-size: 1.2rem; 
+    font-weight: 500;
+    line-height: 1.4;
+}
 
 #posts-list {
     flex: 1;
@@ -196,7 +221,7 @@ button:active { transform: scale(0.95); } /* Mocniejsze, sprężyste wciśnięci
 }
 #posts-list::-webkit-scrollbar { display: none; }
 
-/* Zmodernizowane Dymki */
+/* Dymki z wiadomościami */
 .post-item {
     max-width: 85%;
     width: fit-content;
@@ -214,7 +239,7 @@ button:active { transform: scale(0.95); } /* Mocniejsze, sprężyste wciśnięci
 
 .post-content { 
     word-wrap: break-word; 
-    font-weight: 500; /* Pogrubienie czcionki Dosis */
+    font-weight: 500; 
     color: #f1f1f1;
 }
 

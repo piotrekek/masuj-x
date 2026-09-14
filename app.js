@@ -21,7 +21,18 @@ if (!myUserId) {
     localStorage.setItem('masuj_x_user_id', myUserId);
 }
 
-// Zmodyfikowana funkcja kolorów dająca żywsze, neonowe odcienie
+// Magiczna funkcja zamieniająca HSL na piękny kod HEX
+function hslToHex(h, s, l) {
+    l /= 100;
+    const a = s * Math.min(l, 1 - l) / 100;
+    const f = n => {
+        const k = (n + h / 30) % 12;
+        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+        return Math.round(255 * color).toString(16).padStart(2, '0');
+    };
+    return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
+}
+
 function generateColor(userId, threadId) {
     const str = userId + threadId;
     let hash = 0;
@@ -29,7 +40,7 @@ function generateColor(userId, threadId) {
         hash = str.charCodeAt(i) + ((hash << 5) - hash);
     }
     const h = Math.abs(hash) % 360; 
-    return `hsl(${h}, 85%, 65%)`; // Większa saturacja, idealna do podświetleń (Glow)
+    return hslToHex(h, 85, 65); // Generuje idealny HEX dla ciemnego motywu
 }
 
 const loginScreen = document.getElementById('login-screen');
@@ -53,7 +64,6 @@ document.getElementById('login-btn').addEventListener('click', () => {
     }
 });
 
-// Zwijanie / Rozwijanie nowego wątku
 document.getElementById('show-new-thread-btn').addEventListener('click', () => {
     newThreadBox.classList.remove('hidden');
     document.getElementById('show-new-thread-btn').style.display = 'none';
@@ -117,7 +127,6 @@ function openThread(threadId, title, desc) {
             const div = document.createElement('div');
             div.className = 'post-item';
             
-            // --- EFEKT PREMIUM: Podświetlony pasek boczny + poświata koloru ---
             div.style.borderLeft = `4px solid ${data.color}`;
             div.style.boxShadow = `-4px 0px 18px -5px ${data.color}, 0 8px 24px rgba(0,0,0,0.4)`;
             
@@ -126,10 +135,10 @@ function openThread(threadId, title, desc) {
             const likesCount = likesArray.length;
 
             div.innerHTML = `
-                <!-- Identyfikator koloru - mała, świecąca dioda i napis -->
+                <!-- Identyfikator koloru wyświetlany jako kod HEX -->
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                     <div style="width: 10px; height: 10px; border-radius: 50%; background-color: ${data.color}; box-shadow: 0 0 10px ${data.color};"></div>
-                    <span style="font-size: 0.75rem; color: ${data.color}; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Anonim</span>
+                    <span class="dosis-text" style="font-size: 0.95rem; color: ${data.color}; font-weight: 700; letter-spacing: 1px;">${data.color}</span>
                 </div>
                 
                 <div class="post-content dosis-text">${data.text}</div>
