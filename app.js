@@ -58,6 +58,17 @@ let unsubscribePosts = null;
 let unsubscribeThreads = null;
 let unsubscribeTyping = null;
 
+// FUNKCJA POMOCNICZA - NAPRAWA UCIĘTYCH EMOTEK (Z-Index)
+function closeReactionMenu() {
+    const oldMenu = document.querySelector('.reaction-menu');
+    if(oldMenu) {
+        // Przywracamy bazowy z-index po zamknięciu menu
+        const threadItem = oldMenu.closest('.thread-item');
+        if (threadItem) threadItem.style.zIndex = '1';
+        oldMenu.remove();
+    }
+}
+
 function generateReactionsHTML(reactionsObj, docId) {
     const emojiList = ['❤️', '👍', '😂', '👎', '❓'];
     let html = `<div class="reactions-container">`;
@@ -176,7 +187,6 @@ function loadThreads() {
             
             let adminHTML = isAdmin && data.userAgent ? `<div class="admin-badge">📱 ${data.userAgent}</div>` : '';
             
-            // UWAGA: Usunięto renderowanie opisu (data.description) na stronie głównej
             div.innerHTML = `
                 <h3 class="dosis-text" style="margin-bottom: 0;">${data.title}</h3>
                 <div style="margin-top: 12px;">
@@ -238,7 +248,6 @@ function openThread(threadId, title, desc) {
         readTimestamps[threadId] = Date.now();
         localStorage.setItem('masuj_x_read_timestamps', JSON.stringify(readTimestamps));
 
-        // OPTYMALIZACJA ZJAZDU W DÓŁ (Nie rzuca ekranem gdy czytasz starsze)
         const isAtBottom = postsList.scrollHeight - postsList.scrollTop - postsList.clientHeight < 150;
         if (addedNew && isAtBottom) {
             postsList.scrollTop = postsList.scrollHeight; 
@@ -246,22 +255,20 @@ function openThread(threadId, title, desc) {
     });
 }
 
-// ZABEZPIECZONY CHOWANY NAGŁÓWEK DLA TELEFONÓW
+// NAPRAWIONE, PŁYNNE CHOWANIE NAGŁÓWKA NA TELEFONACH
 let lastScrollY = 0;
 postsList.addEventListener('scroll', () => {
     const currentScrollY = postsList.scrollTop;
-    
-    // Ignoruj rubber-banding na iOS (martwe strefy u góry i dołu, by nie mrugało)
     if (currentScrollY < 0 || currentScrollY > postsList.scrollHeight - postsList.clientHeight) return;
     
     const header = document.querySelector('.chat-header');
     
-    // Scroll w dół (chowa)
-    if (currentScrollY > lastScrollY + 10 && currentScrollY > 50) {
+    // Znika przy zjeżdżaniu w dół
+    if (currentScrollY > lastScrollY + 5 && currentScrollY > 50) {
         header.classList.add('hidden-header');
     } 
-    // Scroll w górę (pokazuje)
-    else if (currentScrollY < lastScrollY - 15 || currentScrollY <= 20) {
+    // Wysuwa się NATYCHMIAST przy minimalnym ruchu w górę (o zaledwie 2 px)
+    else if (currentScrollY < lastScrollY - 2 || currentScrollY <= 20) {
         header.classList.remove('hidden-header');
     }
     lastScrollY = currentScrollY;
@@ -319,8 +326,6 @@ document.getElementById('send-post-btn').addEventListener('click', async () => {
     }
 
     await updateDoc(doc(db, "threads", currentThreadId), { updatedAt: serverTimestamp() });
-    
-    // Upewnij się, że zjedzie na sam dół po Twojej wiadomości
     setTimeout(() => { postsList.scrollTop = postsList.scrollHeight; }, 100);
 });
 
@@ -352,8 +357,7 @@ document.addEventListener('click', async (e) => {
 
     const addBtn = e.target.closest('.react-add-btn');
     if (addBtn) {
-        const oldMenu = document.querySelector('.reaction-menu');
-        if(oldMenu) oldMenu.remove();
+        closeReactionMenu(); // Zamknij jeśli było otwarte gdzie indziej
 
         const id = addBtn.getAttribute('data-id');
         const menu = document.createElement('div');
@@ -365,6 +369,11 @@ document.addEventListener('click', async (e) => {
             <span data-id="${id}" data-emo="👎">👎</span>
             <span data-id="${id}" data-emo="❓">❓</span>
         `;
+        
+        // NAPRAWA: Z-index priorytetowy dla klikniętego wątku
+        const threadItem = addBtn.closest('.thread-item');
+        if (threadItem) threadItem.style.zIndex = '100';
+        
         addBtn.parentElement.parentElement.appendChild(menu);
         return; 
     }
@@ -388,16 +397,13 @@ document.addEventListener('click', async (e) => {
             } else {
                 await updateDoc(ref, { updatedAt: serverTimestamp() });
             }
-            
         } catch(err) { console.error("Error", err); }
         
-        const oldMenu = document.querySelector('.reaction-menu');
-        if(oldMenu) oldMenu.remove();
+        closeReactionMenu();
         return;
     }
 
     if (!e.target.closest('.react-add-btn') && !e.target.closest('.reaction-menu')) {
-        const menu = document.querySelector('.reaction-menu');
-        if(menu) menu.remove();
+        closeReactionMenu();
     }
 });
