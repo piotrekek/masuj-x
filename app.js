@@ -10,7 +10,7 @@ const firebaseConfig = {
   messagingSenderId: "790553642823",
   appId: "1:790553642823:web:e7e70e0512f08fbe372e62",
   measurementId: "G-X4X10D5FGS"
-};;
+};
 // ------------------------------------------------
 
 const app = initializeApp(firebaseConfig);
@@ -57,11 +57,6 @@ let currentThreadId = null;
 let unsubscribePosts = null;
 let unsubscribeThreads = null;
 let unsubscribeTyping = null;
-
-// Zmienne do płynnego przewijania
-let lastScrollY = 0;
-let accumulatedScrollUp = 0;
-let headerCooldown = false;
 
 function closeReactionMenu() {
     const oldMenu = document.querySelector('.reaction-menu');
@@ -125,7 +120,7 @@ document.getElementById('login-btn').addEventListener('click', () => {
     if (pw === GLOBAL_PASSWORD || pw === ADMIN_PASSWORD) {
         if (pw === ADMIN_PASSWORD) isAdmin = true;
         loginScreen.style.display = 'none';
-        threadsScreen.style.display = 'block';
+        threadsScreen.style.display = 'flex'; // Zmiana na flex dla nowego układu
         loadThreads();
     } else { document.getElementById('login-error').style.display = 'block'; }
 });
@@ -204,15 +199,10 @@ function loadThreads() {
 
 function openThread(threadId, title, desc) {
     currentThreadId = threadId;
-    threadsScreen.style.display = 'none'; chatScreen.style.display = 'flex';
+    threadsScreen.style.display = 'none'; 
+    chatScreen.style.display = 'flex'; // Trzyma sztywny układ
     document.getElementById('current-thread-title').innerText = title;
     document.getElementById('current-thread-desc').innerText = desc;
-    
-    // Zresetuj wszystkie zmienne blokujące przy wejściu do nowego wątku
-    lastScrollY = 0;
-    accumulatedScrollUp = 0;
-    headerCooldown = false;
-    document.querySelector('.chat-header').classList.remove('hidden-header');
     postsList.innerHTML = ''; 
     
     if (unsubscribeTyping) unsubscribeTyping();
@@ -263,57 +253,10 @@ function openThread(threadId, title, desc) {
     });
 }
 
-// -------------------------------------------------------------
-// SYSTEM CHOWANIA NAGŁÓWKA CAŁKOWICIE ODPORNY NA SKAKANIE (ANTI-JITTER)
-// -------------------------------------------------------------
-postsList.addEventListener('scroll', () => {
-    const currentScrollY = postsList.scrollTop;
-    const maxScroll = postsList.scrollHeight - postsList.clientHeight;
-    
-    // Zablokuj logikę, jeśli animacja trwa (eliminuje skoki wynikające ze zmiany układu)
-    if (headerCooldown) {
-        lastScrollY = currentScrollY;
-        return;
-    }
-
-    // Ignoruj iOS Rubber-banding (skrajne wartości ekranu)
-    if (currentScrollY <= 0 || currentScrollY >= maxScroll) {
-        return;
-    }
-    
-    const header = document.querySelector('.chat-header');
-    const isHidden = header.classList.contains('hidden-header');
-    
-    // Przewijanie w DÓŁ
-    if (currentScrollY > lastScrollY) {
-        accumulatedScrollUp = 0;
-        
-        // Zabezpieczenie: Nie chowaj nagłówka, jeśli jesteśmy na samym dole (-50px marginesu błędu)
-        if (!isHidden && currentScrollY > 60 && currentScrollY < maxScroll - 50) {
-            headerCooldown = true;
-            header.classList.add('hidden-header');
-            // Zdejmujemy blokadę lekko po zakończeniu animacji CSS (400ms)
-            setTimeout(() => { headerCooldown = false; }, 400); 
-        }
-    } 
-    // Przewijanie w GÓRĘ
-    else {
-        accumulatedScrollUp += (lastScrollY - currentScrollY);
-        
-        // Nagłówek wysuwa się, gdy mocno pociągniesz w górę (70px) lub dojdziesz na szczyt
-        if (isHidden && (accumulatedScrollUp > 70 || currentScrollY <= 20)) {
-            headerCooldown = true;
-            header.classList.remove('hidden-header');
-            setTimeout(() => { headerCooldown = false; }, 400);
-        }
-    }
-    
-    lastScrollY = currentScrollY;
-});
-// -------------------------------------------------------------
+// CAŁKOWICIE USUNIĘTO SKRYPT DO CHOWANIA NAGŁÓWKA
 
 document.getElementById('back-btn').addEventListener('click', () => {
-    chatScreen.style.display = 'none'; threadsScreen.style.display = 'block';
+    chatScreen.style.display = 'none'; threadsScreen.style.display = 'flex';
     if (unsubscribePosts) unsubscribePosts(); if (unsubscribeTyping) unsubscribeTyping();
     currentThreadId = null;
 });
@@ -365,7 +308,6 @@ document.getElementById('send-post-btn').addEventListener('click', async () => {
 
     await updateDoc(doc(db, "threads", currentThreadId), { updatedAt: serverTimestamp() });
     
-    // Zdejmij cooldown dla pewności i scroll na dół
     setTimeout(() => { postsList.scrollTop = postsList.scrollHeight; }, 100);
 });
 
