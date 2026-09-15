@@ -20,8 +20,14 @@ const GLOBAL_PASSWORD = "masuj";
 const ADMIN_PASSWORD = "889c";
 let isAdmin = false;
 
-let readTimestamps = JSON.parse(localStorage.getItem('masuj_x_read_timestamps')) || {};
+// NOWE: Rozwiązanie problemu nowych użytkowników
+let firstVisit = localStorage.getItem('masuj_x_first_visit');
+if (!firstVisit) {
+    firstVisit = Date.now();
+    localStorage.setItem('masuj_x_first_visit', firstVisit);
+}
 
+let readTimestamps = JSON.parse(localStorage.getItem('masuj_x_read_timestamps')) || {};
 let myUserId = localStorage.getItem('masuj_x_user_id');
 if (!myUserId) {
     myUserId = 'user_' + Math.random().toString(36).substr(2, 9);
@@ -57,8 +63,9 @@ let currentThreadId = null;
 let unsubscribePosts = null;
 let unsubscribeThreads = null;
 let unsubscribeTyping = null;
+let presenceInterval = null;
+let unsubscribePresence = null;
 
-// FUNKCJA ZARZĄDZAJĄCA Z-INDEXEM (Żeby menu emotek nie chowało się pod posty)
 function closeReactionMenu() {
     const oldMenu = document.querySelector('.reaction-menu');
     if(oldMenu) {
@@ -82,8 +89,21 @@ function generateReactionsHTML(reactionsObj, docId) {
     return html;
 }
 
+// NOWE: Zamienia tekst na linki lub odtwarzacze YouTube
+function parseLinks(text) {
+    // Sprawdza czy jest link do YouTube
+    const ytMatch = text.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
+    if (ytMatch) {
+        const cleanText = text.replace(ytMatch[0], ''); // Usuwa surowy link z tekstu
+        return cleanText + `<iframe width="100%" height="200" style="border-radius:12px; margin-top:10px; border:none;" src="https://www.youtube.com/embed/${ytMatch[1]}" allowfullscreen></iframe>`;
+    }
+    // Zwykłe linki
+    return text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+}
+
 function renderPostHTML(data, docId) {
     let contentHTML = '';
+    
     if (data.type === 'poll') {
         contentHTML = `<div class="poll-container dosis-text"><div class="poll-question">${data.poll.question}</div>`;
         let totalVotes = 0;
@@ -100,8 +120,21 @@ function renderPostHTML(data, docId) {
             </div>`;
         });
         contentHTML += `</div>`;
-    } else {
-        contentHTML = `<div class="post-content dosis-text">${data.text}</div>`;
+    } 
+    // NOWE: Renderowanie zdjęcia
+    else if (data.type === 'image') {
+        contentHTML = `
+            <div class="img-wrapper">
+                <img src="${data.imageUrl}" alt="Ukryte zdjęcie">
+                <div class="img-overlay dosis-text">
+                    <span style="font-size: 2rem; margin-bottom: 5px;">👁️</span>
+                    <span>Kliknij, by odkryć</span>
+                </div>
+            </div>
+        `;
+    }
+    else {
+        contentHTML = `<div class="post-content dosis-text">${parseLinks(data.text)}</div>`;
     }
 
     let adminHTML = isAdmin && data.userAgent ? `<div class="admin-badge">📱 ${data.userAgent}</div>` : '';
@@ -121,7 +154,7 @@ document.getElementById('login-btn').addEventListener('click', () => {
     if (pw === GLOBAL_PASSWORD || pw === ADMIN_PASSWORD) {
         if (pw === ADMIN_PASSWORD) isAdmin = true;
         loginScreen.style.display = 'none';
-        threadsScreen.style.display = 'flex'; 
+        threadsScreen.style.display = 'flex';
         loadThreads();
     } else { document.getElementById('login-error').style.display = 'block'; }
 });
@@ -155,10 +188,10 @@ function loadThreads() {
     
     unsubscribeThreads = onSnapshot(q, (snapshot) => {
         threadsList.innerHTML = '';
+        
         snapshot.forEach((docSnap) => {
             const data = docSnap.data();
             const docId = docSnap.id;
-            
             const div = document.createElement('div');
             
             let isUnread = false;
@@ -168,7 +201,8 @@ function loadThreads() {
             else threadTime = Date.now(); 
 
             const lastRead = readTimestamps[docId] || 0;
-            if (threadTime > lastRead) { isUnread = true; }
+            // NOWE: Wątek świeci się tylko, jeśli data aktualizacji jest nowsza niż pierwsze wejście na forum
+            if (threadTime > lastRead && threadTime > firstVisit) { isUnread = true; }
             
             div.className = `thread-item fade-in ${isUnread ? 'unread-highlight' : ''}`;
             div.id = `thread-${docId}`;
@@ -204,10 +238,29 @@ function openThread(threadId, title, desc) {
     postsList.innerHTML = `
         <div class="inline-header fade-in">
             <h2 class="dosis-text">${title}</h2>
+            <!-- Tu dodano licznik widzów -->
+            <div id="live-viewers" class="live-badge dosis-text hidden"></div>
             <p class="dosis-text">${desc}</p>
         </div>
     `; 
     
+    // NOWE: Logika Obecności (Live Viewers)
+    const presenceRef = doc(db, `threads/${threadId}/presence`, myUserId);
+    setDoc(presenceRef, { time: Date.now() });
+    presenceInterval = setInterval(() => { if(currentThreadId === threadId) setDoc(presenceRef, { time: Date.now() }); }, 10000);
+    
+    if (unsubscribePresence) unsubscribePresence();
+    unsubscribePresence = onSnapshot(collection(db, `threads/${threadId}/presence`), (snap) => {
+        let count = 0;
+        snap.forEach(d => { if(Date.now() - d.data().time < 20000) count++; });
+        const viewerBadge = document.getElementById('live-viewers');
+        if (count > 0) {
+            viewerBadge.classList.remove('hidden');
+            viewerBadge.innerHTML = `<div class="live-dot"></div> ${count} ${count === 1 ? 'osoba czyta' : (count < 5 ? 'osoby czytają' : 'osób czyta')}`;
+        } else { viewerBadge.classList.add('hidden'); }
+    });
+    
+    // TYPING INDICATOR
     if (unsubscribeTyping) unsubscribeTyping();
     unsubscribeTyping = onSnapshot(collection(db, `threads/${threadId}/typing`), (snapshot) => {
         const typingUsers = [];
@@ -215,7 +268,7 @@ function openThread(threadId, title, desc) {
         const typInd = document.getElementById('typing-indicator');
         if (typingUsers.length > 0) {
             typInd.classList.remove('hidden');
-            typInd.innerHTML = `<span style="color:${typingUsers[0]};">${typingUsers[0]}</span> <span class="typing-dots">pisze</span>`;
+            typInd.innerHTML = `<span class="dosis-text" style="color:${typingUsers[0]};">${typingUsers[0]}</span> <span class="typing-dots dosis-text">pisze</span>`;
         } else { typInd.classList.add('hidden'); }
     });
 
@@ -257,8 +310,13 @@ function openThread(threadId, title, desc) {
 }
 
 document.getElementById('back-btn').addEventListener('click', () => {
+    if (currentThreadId) deleteDoc(doc(db, `threads/${currentThreadId}/presence`, myUserId)); // Wyjście = usunięcie obecności
+    clearInterval(presenceInterval);
+    
     chatScreen.style.display = 'none'; threadsScreen.style.display = 'flex';
-    if (unsubscribePosts) unsubscribePosts(); if (unsubscribeTyping) unsubscribeTyping();
+    if (unsubscribePosts) unsubscribePosts(); 
+    if (unsubscribeTyping) unsubscribeTyping();
+    if (unsubscribePresence) unsubscribePresence();
     currentThreadId = null;
 });
 
@@ -271,15 +329,49 @@ document.getElementById('new-post-content').addEventListener('input', () => {
     typingTimeout = setTimeout(() => { deleteDoc(doc(db, `threads/${currentThreadId}/typing`, myUserId)); }, 2000);
 });
 
-// ZARZĄDZANIE WIDOKIEM ANKIETY
-document.getElementById('toggle-poll-btn').addEventListener('click', () => { 
-    document.getElementById('poll-creator').classList.toggle('hidden'); 
-});
-document.getElementById('cancel-poll-btn').addEventListener('click', () => { 
-    document.getElementById('poll-creator').classList.add('hidden'); 
+// UI Ankiety
+document.getElementById('toggle-poll-btn').addEventListener('click', () => { document.getElementById('poll-creator').classList.toggle('hidden'); });
+document.getElementById('cancel-poll-btn').addEventListener('click', () => { document.getElementById('poll-creator').classList.add('hidden'); });
+
+// NOWE: Wgrywanie zdjęcia (Przycisk i kompresja Canvas)
+document.getElementById('trigger-image-btn').addEventListener('click', () => {
+    document.getElementById('image-upload').click();
 });
 
-// LOGIKA WYSYŁANIA ANKIETY (Nowy Przycisk!)
+document.getElementById('image-upload').addEventListener('change', (e) => {
+    if (!currentThreadId) return;
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const img = new Image();
+        img.onload = async () => {
+            // Kompresja by nie zapchać bazy (max 800px szerokości)
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 800;
+            let width = img.width; let height = img.height;
+            if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+            canvas.width = width; canvas.height = height;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.6); // 60% jakości
+
+            const color = generateColor(myUserId, currentThreadId);
+            await addDoc(collection(db, "threads", currentThreadId, "posts"), {
+                type: 'image', imageUrl: dataUrl, color, userAgent: myUserAgent, createdAt: serverTimestamp(), reactions: {}
+            });
+            await updateDoc(doc(db, "threads", currentThreadId), { updatedAt: serverTimestamp() });
+            setTimeout(() => { postsList.scrollTop = postsList.scrollHeight; }, 100);
+        };
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = ''; // Czyszczenie inputa
+});
+
+
 document.getElementById('send-poll-btn').addEventListener('click', async () => {
     if (!currentThreadId) return;
     const q = document.getElementById('poll-question').value;
@@ -307,7 +399,6 @@ document.getElementById('send-poll-btn').addEventListener('click', async () => {
     setTimeout(() => { postsList.scrollTop = postsList.scrollHeight; }, 100);
 });
 
-// LOGIKA WYSYŁANIA ZWYKŁEJ WIADOMOŚCI
 document.getElementById('send-post-btn').addEventListener('click', async () => {
     if (!currentThreadId) return;
     const input = document.getElementById('new-post-content');
@@ -323,8 +414,14 @@ document.getElementById('send-post-btn').addEventListener('click', async () => {
     setTimeout(() => { postsList.scrollTop = postsList.scrollHeight; }, 100);
 });
 
-// DELEGACJA AKCJI (Głosowanie i Emotki)
 document.addEventListener('click', async (e) => {
+    // NOWE: Odkrywanie zdjęcia (Tap to reveal)
+    const imgWrap = e.target.closest('.img-wrapper');
+    if (imgWrap) {
+        imgWrap.classList.toggle('revealed');
+        return;
+    }
+
     const pollOpt = e.target.closest('.poll-option');
     if (pollOpt && currentThreadId) {
         const postId = pollOpt.getAttribute('data-post');
@@ -386,11 +483,7 @@ document.addEventListener('click', async (e) => {
             if (isBadgeAndActive) await updateDoc(ref, { [updateField]: arrayRemove(myUserId) });
             else await updateDoc(ref, { [updateField]: arrayUnion(myUserId) });
             
-            if (isPost) {
-                await updateDoc(doc(db, "threads", currentThreadId), { updatedAt: serverTimestamp() });
-            } else {
-                await updateDoc(ref, { updatedAt: serverTimestamp() });
-            }
+            // UWAGA: Usunięto tutaj updateDoc updatedAt. Lajki NIE podbijają już tematu i go nie podświetlają!
         } catch(err) { console.error("Error", err); }
         
         closeReactionMenu();
@@ -399,5 +492,13 @@ document.addEventListener('click', async (e) => {
 
     if (!e.target.closest('.react-add-btn') && !e.target.closest('.reaction-menu')) {
         closeReactionMenu();
+    }
+});
+
+// Czyszczenie obecności na wypadek zamknięcia karty w przeglądarce
+window.addEventListener("beforeunload", () => {
+    if (currentThreadId) {
+        // Używamy tzw. sendBeacon lub prostej próby usunięcia by nie śmiecić bazy
+        deleteDoc(doc(db, `threads/${currentThreadId}/presence`, myUserId));
     }
 });
