@@ -20,7 +20,6 @@ const GLOBAL_PASSWORD = "masuj";
 const ADMIN_PASSWORD = "889c";
 let isAdmin = false;
 
-// Pamięć przeczytanych wątków
 let readTimestamps = JSON.parse(localStorage.getItem('masuj_x_read_timestamps')) || {};
 
 let myUserId = localStorage.getItem('masuj_x_user_id');
@@ -131,10 +130,8 @@ document.getElementById('create-thread-btn').addEventListener('click', async () 
 
     await addDoc(collection(db, "threads"), {
         title, description: desc, 
-        createdAt: serverTimestamp(), 
-        updatedAt: serverTimestamp(), // Do sortowania po nowości
-        userAgent: myUserAgent, 
-        reactions: {}
+        createdAt: serverTimestamp(), updatedAt: serverTimestamp(), 
+        userAgent: myUserAgent, reactions: {}
     });
     document.getElementById('new-thread-title').value = '';
     document.getElementById('new-thread-desc').value = '';
@@ -143,12 +140,10 @@ document.getElementById('create-thread-btn').addEventListener('click', async () 
 });
 
 function loadThreads() {
-    // Trik Apple - najnowsza aktywność ląduje na górze
     const q = query(collection(db, "threads"), orderBy("updatedAt", "desc"));
     if(unsubscribeThreads) unsubscribeThreads();
     
     unsubscribeThreads = onSnapshot(q, (snapshot) => {
-        // Czyścimy by nie dublować przy zmianie kolejności (prosta re-aplikacja widoku)
         threadsList.innerHTML = '';
         
         snapshot.forEach((docSnap) => {
@@ -157,7 +152,6 @@ function loadThreads() {
             
             const div = document.createElement('div');
             
-            // Sprawdzanie czy są NOWE wiadomości
             let isUnread = false;
             let threadTime = 0;
             if (data.updatedAt && data.updatedAt.toMillis) threadTime = data.updatedAt.toMillis();
@@ -165,9 +159,7 @@ function loadThreads() {
             else threadTime = Date.now(); 
 
             const lastRead = readTimestamps[docId] || 0;
-            if (threadTime > lastRead) {
-                isUnread = true; // Złapano nową aktywność!
-            }
+            if (threadTime > lastRead) { isUnread = true; }
             
             div.className = `thread-item fade-in ${isUnread ? 'unread-highlight' : ''}`;
             div.id = `thread-${docId}`;
@@ -175,19 +167,21 @@ function loadThreads() {
             div.addEventListener('click', (e) => {
                 if (e.target.closest('.reaction-badge') || e.target.closest('.react-add-btn') || e.target.closest('.reaction-menu')) return;
                 
-                // Zapisz czas przeczytania
                 readTimestamps[docId] = Date.now();
                 localStorage.setItem('masuj_x_read_timestamps', JSON.stringify(readTimestamps));
-                div.classList.remove('unread-highlight'); // Usuń podświetlenie z klikniętego
+                div.classList.remove('unread-highlight'); 
                 
                 openThread(docId, data.title, data.description);
             });
             
             let adminHTML = isAdmin && data.userAgent ? `<div class="admin-badge">📱 ${data.userAgent}</div>` : '';
+            
+            // UWAGA: Usunięto renderowanie opisu (data.description) na stronie głównej
             div.innerHTML = `
-                <h3 class="dosis-text">${data.title}</h3>
-                <p class="dosis-text">${data.description}</p>
-                ${generateReactionsHTML(data.reactions || {}, docId)}
+                <h3 class="dosis-text" style="margin-bottom: 0;">${data.title}</h3>
+                <div style="margin-top: 12px;">
+                    ${generateReactionsHTML(data.reactions || {}, docId)}
+                </div>
                 ${adminHTML}
             `;
             threadsList.appendChild(div);
@@ -241,20 +235,35 @@ function openThread(threadId, title, desc) {
             }
         });
         
-        // Zaktualizuj odczyt jeśli dostajemy wiadomości siedząc na czacie
         readTimestamps[threadId] = Date.now();
         localStorage.setItem('masuj_x_read_timestamps', JSON.stringify(readTimestamps));
 
-        if (addedNew) postsList.scrollTop = postsList.scrollHeight; 
+        // OPTYMALIZACJA ZJAZDU W DÓŁ (Nie rzuca ekranem gdy czytasz starsze)
+        const isAtBottom = postsList.scrollHeight - postsList.scrollTop - postsList.clientHeight < 150;
+        if (addedNew && isAtBottom) {
+            postsList.scrollTop = postsList.scrollHeight; 
+        }
     });
 }
 
+// ZABEZPIECZONY CHOWANY NAGŁÓWEK DLA TELEFONÓW
 let lastScrollY = 0;
 postsList.addEventListener('scroll', () => {
     const currentScrollY = postsList.scrollTop;
+    
+    // Ignoruj rubber-banding na iOS (martwe strefy u góry i dołu, by nie mrugało)
+    if (currentScrollY < 0 || currentScrollY > postsList.scrollHeight - postsList.clientHeight) return;
+    
     const header = document.querySelector('.chat-header');
-    if (currentScrollY > lastScrollY && currentScrollY > 30) header.classList.add('hidden-header');
-    else if (currentScrollY < lastScrollY) header.classList.remove('hidden-header');
+    
+    // Scroll w dół (chowa)
+    if (currentScrollY > lastScrollY + 10 && currentScrollY > 50) {
+        header.classList.add('hidden-header');
+    } 
+    // Scroll w górę (pokazuje)
+    else if (currentScrollY < lastScrollY - 15 || currentScrollY <= 20) {
+        header.classList.remove('hidden-header');
+    }
     lastScrollY = currentScrollY;
 });
 
@@ -309,10 +318,10 @@ document.getElementById('send-post-btn').addEventListener('click', async () => {
         input.value = ''; 
     }
 
-    // WAŻNE: Aktualizuje datę wątku by wystrzelił na górę listy u wszystkich!
-    await updateDoc(doc(db, "threads", currentThreadId), {
-        updatedAt: serverTimestamp()
-    });
+    await updateDoc(doc(db, "threads", currentThreadId), { updatedAt: serverTimestamp() });
+    
+    // Upewnij się, że zjedzie na sam dół po Twojej wiadomości
+    setTimeout(() => { postsList.scrollTop = postsList.scrollHeight; }, 100);
 });
 
 document.addEventListener('click', async (e) => {
@@ -374,7 +383,6 @@ document.addEventListener('click', async (e) => {
             if (isBadgeAndActive) await updateDoc(ref, { [updateField]: arrayRemove(myUserId) });
             else await updateDoc(ref, { [updateField]: arrayUnion(myUserId) });
             
-            // Jeśli to lajk posta, też podbijamy wątek u innych
             if (isPost) {
                 await updateDoc(doc(db, "threads", currentThreadId), { updatedAt: serverTimestamp() });
             } else {
