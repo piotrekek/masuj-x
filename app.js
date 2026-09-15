@@ -201,7 +201,6 @@ function openThread(threadId, title, desc) {
     currentThreadId = threadId;
     threadsScreen.style.display = 'none'; chatScreen.style.display = 'flex';
     
-    // TWORZYMY INLINE HEADER WEWNĄTRZ LISTY CZATU
     postsList.innerHTML = `
         <div class="inline-header fade-in">
             <h2 class="dosis-text">${title}</h2>
@@ -257,8 +256,6 @@ function openThread(threadId, title, desc) {
     });
 }
 
-// CAŁKOWICIE USUNIĘTO SKRYPT DO NASŁUCHIWANIA PRZEWIJANIA (Koniec problemów ze skakaniem)
-
 document.getElementById('back-btn').addEventListener('click', () => {
     chatScreen.style.display = 'none'; threadsScreen.style.display = 'flex';
     if (unsubscribePosts) unsubscribePosts(); if (unsubscribeTyping) unsubscribeTyping();
@@ -274,41 +271,50 @@ document.getElementById('new-post-content').addEventListener('input', () => {
     typingTimeout = setTimeout(() => { deleteDoc(doc(db, `threads/${currentThreadId}/typing`, myUserId)); }, 2000);
 });
 
+// UI Ankiety
 document.getElementById('toggle-poll-btn').addEventListener('click', () => { document.getElementById('poll-creator').classList.toggle('hidden'); });
 document.getElementById('cancel-poll-btn').addEventListener('click', () => { document.getElementById('poll-creator').classList.add('hidden'); });
 
+// --- WYSYŁANIE ANKIETY ---
+document.getElementById('send-poll-btn').addEventListener('click', async () => {
+    if (!currentThreadId) return;
+    const q = document.getElementById('poll-question').value;
+    const opts = [];
+    [1, 2, 3, 4].forEach(i => {
+        const val = document.getElementById(`poll-opt${i}`).value.trim();
+        if (val) opts.push({ text: val, votes: [] });
+    });
+    
+    if(q.trim() === '' || opts.length < 2) {
+        alert("Podaj pytanie i co najmniej 2 opcje!"); return;
+    }
+    
+    const color = generateColor(myUserId, currentThreadId);
+    await addDoc(collection(db, "threads", currentThreadId, "posts"), {
+        type: 'poll', color, userAgent: myUserAgent, createdAt: serverTimestamp(), reactions: {},
+        poll: { question: q, options: opts }
+    });
+    
+    // Czyszczenie i chowanie
+    document.getElementById('poll-question').value = '';
+    [1,2,3,4].forEach(i => document.getElementById(`poll-opt${i}`).value = '');
+    document.getElementById('poll-creator').classList.add('hidden');
+
+    await updateDoc(doc(db, "threads", currentThreadId), { updatedAt: serverTimestamp() });
+    setTimeout(() => { postsList.scrollTop = postsList.scrollHeight; }, 100);
+});
+
+// --- WYSYŁANIE ZWYKŁEJ WIADOMOŚCI ---
 document.getElementById('send-post-btn').addEventListener('click', async () => {
     if (!currentThreadId) return;
-    const color = generateColor(myUserId, currentThreadId);
-    const pollCreator = document.getElementById('poll-creator');
+    const input = document.getElementById('new-post-content');
+    if (input.value.trim() === '') return;
     
-    if (!pollCreator.classList.contains('hidden')) {
-        const q = document.getElementById('poll-question').value;
-        const opts = [];
-        [1, 2, 3, 4].forEach(i => {
-            const val = document.getElementById(`poll-opt${i}`).value.trim();
-            if (val) opts.push({ text: val, votes: [] });
-        });
-        
-        if(q.trim() === '' || opts.length < 2) {
-            alert("Podaj pytanie i co najmniej 2 opcje!"); return;
-        }
-        
-        await addDoc(collection(db, "threads", currentThreadId, "posts"), {
-            type: 'poll', color, userAgent: myUserAgent, createdAt: serverTimestamp(), reactions: {},
-            poll: { question: q, options: opts }
-        });
-        document.getElementById('poll-question').value = '';
-        [1,2,3,4].forEach(i => document.getElementById(`poll-opt${i}`).value = '');
-        pollCreator.classList.add('hidden');
-    } else {
-        const input = document.getElementById('new-post-content');
-        if (input.value.trim() === '') return;
-        await addDoc(collection(db, "threads", currentThreadId, "posts"), {
-            type: 'text', text: input.value, color, userAgent: myUserAgent, createdAt: serverTimestamp(), reactions: {}
-        });
-        input.value = ''; 
-    }
+    const color = generateColor(myUserId, currentThreadId);
+    await addDoc(collection(db, "threads", currentThreadId, "posts"), {
+        type: 'text', text: input.value, color, userAgent: myUserAgent, createdAt: serverTimestamp(), reactions: {}
+    });
+    input.value = ''; 
 
     await updateDoc(doc(db, "threads", currentThreadId), { updatedAt: serverTimestamp() });
     setTimeout(() => { postsList.scrollTop = postsList.scrollHeight; }, 100);
