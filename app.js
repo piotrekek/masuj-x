@@ -10,7 +10,7 @@ const firebaseConfig = {
   messagingSenderId: "790553642823",
   appId: "1:790553642823:web:e7e70e0512f08fbe372e62",
   measurementId: "G-X4X10D5FGS"
-};
+};;
 // ------------------------------------------------
 
 const app = initializeApp(firebaseConfig);
@@ -57,6 +57,11 @@ let currentThreadId = null;
 let unsubscribePosts = null;
 let unsubscribeThreads = null;
 let unsubscribeTyping = null;
+
+// Zmienne do płynnego przewijania
+let lastScrollY = 0;
+let accumulatedScrollUp = 0;
+let headerCooldown = false;
 
 function closeReactionMenu() {
     const oldMenu = document.querySelector('.reaction-menu');
@@ -202,6 +207,11 @@ function openThread(threadId, title, desc) {
     threadsScreen.style.display = 'none'; chatScreen.style.display = 'flex';
     document.getElementById('current-thread-title').innerText = title;
     document.getElementById('current-thread-desc').innerText = desc;
+    
+    // Zresetuj wszystkie zmienne blokujące przy wejściu do nowego wątku
+    lastScrollY = 0;
+    accumulatedScrollUp = 0;
+    headerCooldown = false;
     document.querySelector('.chat-header').classList.remove('hidden-header');
     postsList.innerHTML = ''; 
     
@@ -254,36 +264,47 @@ function openThread(threadId, title, desc) {
 }
 
 // -------------------------------------------------------------
-// NOWY, PANCERNY SYSTEM CHOWANIA NAGŁÓWKA
+// SYSTEM CHOWANIA NAGŁÓWKA CAŁKOWICIE ODPORNY NA SKAKANIE (ANTI-JITTER)
 // -------------------------------------------------------------
-let lastScrollY = 0;
-let accumulatedScrollUp = 0; // Licznik zdecydowanego przesunięcia w górę
-
 postsList.addEventListener('scroll', () => {
     const currentScrollY = postsList.scrollTop;
+    const maxScroll = postsList.scrollHeight - postsList.clientHeight;
     
-    // Zabezpieczenie przed iOS Rubber-bandingiem (ignorowanie przeciągnięć poza ekran)
-    if (currentScrollY <= 0) {
-        document.querySelector('.chat-header').classList.remove('hidden-header');
+    // Zablokuj logikę, jeśli animacja trwa (eliminuje skoki wynikające ze zmiany układu)
+    if (headerCooldown) {
+        lastScrollY = currentScrollY;
         return;
     }
-    if (currentScrollY >= postsList.scrollHeight - postsList.clientHeight) return;
+
+    // Ignoruj iOS Rubber-banding (skrajne wartości ekranu)
+    if (currentScrollY <= 0 || currentScrollY >= maxScroll) {
+        return;
+    }
     
     const header = document.querySelector('.chat-header');
+    const isHidden = header.classList.contains('hidden-header');
     
-    // Jeśli użytkownik przewija w dół
+    // Przewijanie w DÓŁ
     if (currentScrollY > lastScrollY) {
-        accumulatedScrollUp = 0; // Resetujemy licznik ruchu w górę
-        if (currentScrollY > 60) {
+        accumulatedScrollUp = 0;
+        
+        // Zabezpieczenie: Nie chowaj nagłówka, jeśli jesteśmy na samym dole (-50px marginesu błędu)
+        if (!isHidden && currentScrollY > 60 && currentScrollY < maxScroll - 50) {
+            headerCooldown = true;
             header.classList.add('hidden-header');
+            // Zdejmujemy blokadę lekko po zakończeniu animacji CSS (400ms)
+            setTimeout(() => { headerCooldown = false; }, 400); 
         }
     } 
-    // Jeśli użytkownik przewija w górę
+    // Przewijanie w GÓRĘ
     else {
         accumulatedScrollUp += (lastScrollY - currentScrollY);
-        // Nagłówek wysuwa się TYLKO gdy pociągniesz mocno w górę (ponad 70px) lub wrócisz na sam szczyt
-        if (accumulatedScrollUp > 70 || currentScrollY <= 20) {
+        
+        // Nagłówek wysuwa się, gdy mocno pociągniesz w górę (70px) lub dojdziesz na szczyt
+        if (isHidden && (accumulatedScrollUp > 70 || currentScrollY <= 20)) {
+            headerCooldown = true;
             header.classList.remove('hidden-header');
+            setTimeout(() => { headerCooldown = false; }, 400);
         }
     }
     
@@ -343,6 +364,8 @@ document.getElementById('send-post-btn').addEventListener('click', async () => {
     }
 
     await updateDoc(doc(db, "threads", currentThreadId), { updatedAt: serverTimestamp() });
+    
+    // Zdejmij cooldown dla pewności i scroll na dół
     setTimeout(() => { postsList.scrollTop = postsList.scrollHeight; }, 100);
 });
 
