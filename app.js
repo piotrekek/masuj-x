@@ -58,11 +58,12 @@ let unsubscribePosts = null;
 let unsubscribeThreads = null;
 let unsubscribeTyping = null;
 
+// FUNKCJA ZARZĄDZAJĄCA Z-INDEXEM (Żeby menu emotek nie chowało się pod posty)
 function closeReactionMenu() {
     const oldMenu = document.querySelector('.reaction-menu');
     if(oldMenu) {
-        const threadItem = oldMenu.closest('.thread-item');
-        if (threadItem) threadItem.style.zIndex = '1';
+        const parent = oldMenu.closest('.thread-item') || oldMenu.closest('.post-item');
+        if (parent) parent.style.zIndex = '1';
         oldMenu.remove();
     }
 }
@@ -120,7 +121,7 @@ document.getElementById('login-btn').addEventListener('click', () => {
     if (pw === GLOBAL_PASSWORD || pw === ADMIN_PASSWORD) {
         if (pw === ADMIN_PASSWORD) isAdmin = true;
         loginScreen.style.display = 'none';
-        threadsScreen.style.display = 'flex';
+        threadsScreen.style.display = 'flex'; 
         loadThreads();
     } else { document.getElementById('login-error').style.display = 'block'; }
 });
@@ -154,7 +155,6 @@ function loadThreads() {
     
     unsubscribeThreads = onSnapshot(q, (snapshot) => {
         threadsList.innerHTML = '';
-        
         snapshot.forEach((docSnap) => {
             const data = docSnap.data();
             const docId = docSnap.id;
@@ -271,11 +271,15 @@ document.getElementById('new-post-content').addEventListener('input', () => {
     typingTimeout = setTimeout(() => { deleteDoc(doc(db, `threads/${currentThreadId}/typing`, myUserId)); }, 2000);
 });
 
-// UI Ankiety
-document.getElementById('toggle-poll-btn').addEventListener('click', () => { document.getElementById('poll-creator').classList.toggle('hidden'); });
-document.getElementById('cancel-poll-btn').addEventListener('click', () => { document.getElementById('poll-creator').classList.add('hidden'); });
+// ZARZĄDZANIE WIDOKIEM ANKIETY
+document.getElementById('toggle-poll-btn').addEventListener('click', () => { 
+    document.getElementById('poll-creator').classList.toggle('hidden'); 
+});
+document.getElementById('cancel-poll-btn').addEventListener('click', () => { 
+    document.getElementById('poll-creator').classList.add('hidden'); 
+});
 
-// --- WYSYŁANIE ANKIETY ---
+// LOGIKA WYSYŁANIA ANKIETY (Nowy Przycisk!)
 document.getElementById('send-poll-btn').addEventListener('click', async () => {
     if (!currentThreadId) return;
     const q = document.getElementById('poll-question').value;
@@ -295,7 +299,6 @@ document.getElementById('send-poll-btn').addEventListener('click', async () => {
         poll: { question: q, options: opts }
     });
     
-    // Czyszczenie i chowanie
     document.getElementById('poll-question').value = '';
     [1,2,3,4].forEach(i => document.getElementById(`poll-opt${i}`).value = '');
     document.getElementById('poll-creator').classList.add('hidden');
@@ -304,7 +307,7 @@ document.getElementById('send-poll-btn').addEventListener('click', async () => {
     setTimeout(() => { postsList.scrollTop = postsList.scrollHeight; }, 100);
 });
 
-// --- WYSYŁANIE ZWYKŁEJ WIADOMOŚCI ---
+// LOGIKA WYSYŁANIA ZWYKŁEJ WIADOMOŚCI
 document.getElementById('send-post-btn').addEventListener('click', async () => {
     if (!currentThreadId) return;
     const input = document.getElementById('new-post-content');
@@ -320,6 +323,7 @@ document.getElementById('send-post-btn').addEventListener('click', async () => {
     setTimeout(() => { postsList.scrollTop = postsList.scrollHeight; }, 100);
 });
 
+// DELEGACJA AKCJI (Głosowanie i Emotki)
 document.addEventListener('click', async (e) => {
     const pollOpt = e.target.closest('.poll-option');
     if (pollOpt && currentThreadId) {
@@ -361,8 +365,8 @@ document.addEventListener('click', async (e) => {
             <span data-id="${id}" data-emo="❓">❓</span>
         `;
         
-        const threadItem = addBtn.closest('.thread-item');
-        if (threadItem) threadItem.style.zIndex = '100';
+        const parentBox = addBtn.closest('.thread-item') || addBtn.closest('.post-item');
+        if (parentBox) parentBox.style.zIndex = '100';
         
         addBtn.parentElement.parentElement.appendChild(menu);
         return; 
