@@ -67,7 +67,7 @@ button:active { transform: scale(0.95); }
     backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--border-color); border-radius: 18px; padding: 20px 22px; margin-bottom: 15px;
     cursor: pointer; transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
-    position: relative; 
+    position: relative; z-index: 1; /* Bazowa warstwa dla naprawy uciętych emotek */
 }
 .thread-item:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.3); }
 .thread-item h3 { margin: 0 0 8px 0; font-size: 1.45rem; font-weight: 700; color: var(--accent); transition: color 0.3s; }
@@ -82,16 +82,17 @@ button:active { transform: scale(0.95); }
 
 .chat-container { display: flex; flex-direction: column; height: 90vh; }
 
-/* OPTYMALIZACJA MOBILNA: Flex shrink zapobiega łamaniu się flexboxa przy chowaniu */
+/* NAPRAWIONE: Gładsze chowanie nagłówka bez rzucania ekranem */
 .chat-header {
-    margin-bottom: 20px; padding: 18px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    transform-origin: top; max-height: 250px; opacity: 1; flex-shrink: 0;
+    margin-bottom: 20px; padding: 18px; 
+    transition: max-height 0.35s ease, padding 0.35s ease, margin 0.35s ease, opacity 0.3s ease, border-color 0.3s ease;
+    transform-origin: top; max-height: 200px; opacity: 1; flex-shrink: 0;
+    overflow: hidden; /* Konieczne, by elementy wewnątrz nie wystawały przy zwijaniu */
 }
 .chat-header.hidden-header { 
     max-height: 0; padding-top: 0; padding-bottom: 0; margin-bottom: 0; 
-    opacity: 0; transform: scaleY(0.5); border: none; overflow: hidden; 
+    opacity: 0; border-color: transparent; 
 }
-
 .chat-info h2 { margin: 0; font-weight: 700; font-size: 1.6rem; color: var(--accent); }
 .chat-info p { margin: 8px 0 0 0; color: #f5f5f7; font-size: 1.2rem; font-weight: 500; }
 
@@ -124,7 +125,7 @@ button:active { transform: scale(0.95); }
 .react-add-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
 
 .reaction-menu {
-    position: absolute; bottom: -40px; left: 10px; display: flex; gap: 5px;
+    position: absolute; bottom: -45px; left: 10px; display: flex; gap: 5px;
     background: rgba(40, 40, 42, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
     padding: 8px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
     box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 50; animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
