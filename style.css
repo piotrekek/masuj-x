@@ -73,24 +73,25 @@ button:active { transform: scale(0.95); }
 .thread-item h3 { margin: 0 0 8px 0; font-size: 1.45rem; font-weight: 700; color: var(--accent); transition: color 0.3s; }
 .thread-item p { margin: 0 0 10px 0; color: #f5f5f7; font-size: 1.15rem; font-weight: 500; }
 
-/* NOWE: PODŚWIETLENIE NIEPRZECZYTANYCH WĄTKÓW */
 .thread-item.unread-highlight {
     border-color: rgba(255, 255, 255, 0.6);
     background: linear-gradient(145deg, rgba(50, 50, 55, 0.8), rgba(40, 40, 45, 0.8));
     box-shadow: 0 0 18px rgba(255, 255, 255, 0.15);
 }
-.thread-item.unread-highlight h3 {
-    color: #ffffff;
-    text-shadow: 0 2px 10px rgba(255, 255, 255, 0.4);
-}
+.thread-item.unread-highlight h3 { color: #ffffff; text-shadow: 0 2px 10px rgba(255, 255, 255, 0.4); }
 
 .chat-container { display: flex; flex-direction: column; height: 90vh; }
 
+/* OPTYMALIZACJA MOBILNA: Flex shrink zapobiega łamaniu się flexboxa przy chowaniu */
 .chat-header {
-    margin-bottom: 20px; padding: 18px; transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-    transform-origin: top; max-height: 200px; opacity: 1;
+    margin-bottom: 20px; padding: 18px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transform-origin: top; max-height: 250px; opacity: 1; flex-shrink: 0;
 }
-.chat-header.hidden-header { max-height: 0; padding-top: 0; padding-bottom: 0; margin-bottom: 0; opacity: 0; transform: scaleY(0.8); border: none; overflow: hidden; }
+.chat-header.hidden-header { 
+    max-height: 0; padding-top: 0; padding-bottom: 0; margin-bottom: 0; 
+    opacity: 0; transform: scaleY(0.5); border: none; overflow: hidden; 
+}
+
 .chat-info h2 { margin: 0; font-weight: 700; font-size: 1.6rem; color: var(--accent); }
 .chat-info p { margin: 8px 0 0 0; color: #f5f5f7; font-size: 1.2rem; font-weight: 500; }
 
