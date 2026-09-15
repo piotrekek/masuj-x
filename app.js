@@ -58,11 +58,9 @@ let unsubscribePosts = null;
 let unsubscribeThreads = null;
 let unsubscribeTyping = null;
 
-// FUNKCJA POMOCNICZA - NAPRAWA UCIĘTYCH EMOTEK (Z-Index)
 function closeReactionMenu() {
     const oldMenu = document.querySelector('.reaction-menu');
     if(oldMenu) {
-        // Przywracamy bazowy z-index po zamknięciu menu
         const threadItem = oldMenu.closest('.thread-item');
         if (threadItem) threadItem.style.zIndex = '1';
         oldMenu.remove();
@@ -255,24 +253,43 @@ function openThread(threadId, title, desc) {
     });
 }
 
-// NAPRAWIONE, PŁYNNE CHOWANIE NAGŁÓWKA NA TELEFONACH
+// -------------------------------------------------------------
+// NOWY, PANCERNY SYSTEM CHOWANIA NAGŁÓWKA
+// -------------------------------------------------------------
 let lastScrollY = 0;
+let accumulatedScrollUp = 0; // Licznik zdecydowanego przesunięcia w górę
+
 postsList.addEventListener('scroll', () => {
     const currentScrollY = postsList.scrollTop;
-    if (currentScrollY < 0 || currentScrollY > postsList.scrollHeight - postsList.clientHeight) return;
+    
+    // Zabezpieczenie przed iOS Rubber-bandingiem (ignorowanie przeciągnięć poza ekran)
+    if (currentScrollY <= 0) {
+        document.querySelector('.chat-header').classList.remove('hidden-header');
+        return;
+    }
+    if (currentScrollY >= postsList.scrollHeight - postsList.clientHeight) return;
     
     const header = document.querySelector('.chat-header');
     
-    // Znika przy zjeżdżaniu w dół
-    if (currentScrollY > lastScrollY + 5 && currentScrollY > 50) {
-        header.classList.add('hidden-header');
+    // Jeśli użytkownik przewija w dół
+    if (currentScrollY > lastScrollY) {
+        accumulatedScrollUp = 0; // Resetujemy licznik ruchu w górę
+        if (currentScrollY > 60) {
+            header.classList.add('hidden-header');
+        }
     } 
-    // Wysuwa się NATYCHMIAST przy minimalnym ruchu w górę (o zaledwie 2 px)
-    else if (currentScrollY < lastScrollY - 2 || currentScrollY <= 20) {
-        header.classList.remove('hidden-header');
+    // Jeśli użytkownik przewija w górę
+    else {
+        accumulatedScrollUp += (lastScrollY - currentScrollY);
+        // Nagłówek wysuwa się TYLKO gdy pociągniesz mocno w górę (ponad 70px) lub wrócisz na sam szczyt
+        if (accumulatedScrollUp > 70 || currentScrollY <= 20) {
+            header.classList.remove('hidden-header');
+        }
     }
+    
     lastScrollY = currentScrollY;
 });
+// -------------------------------------------------------------
 
 document.getElementById('back-btn').addEventListener('click', () => {
     chatScreen.style.display = 'none'; threadsScreen.style.display = 'block';
@@ -357,7 +374,7 @@ document.addEventListener('click', async (e) => {
 
     const addBtn = e.target.closest('.react-add-btn');
     if (addBtn) {
-        closeReactionMenu(); // Zamknij jeśli było otwarte gdzie indziej
+        closeReactionMenu(); 
 
         const id = addBtn.getAttribute('data-id');
         const menu = document.createElement('div');
@@ -370,7 +387,6 @@ document.addEventListener('click', async (e) => {
             <span data-id="${id}" data-emo="❓">❓</span>
         `;
         
-        // NAPRAWA: Z-index priorytetowy dla klikniętego wątku
         const threadItem = addBtn.closest('.thread-item');
         if (threadItem) threadItem.style.zIndex = '100';
         
