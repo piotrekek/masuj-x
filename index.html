@@ -30,7 +30,7 @@
             <div class="threads-header">
                 <h2>Wątki</h2>
                 <button id="show-new-thread-btn" class="icon-btn secondary-btn glass">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     Nowy wątek
                 </button>
             </div>
@@ -51,7 +51,7 @@
         <div id="chat-screen" style="display: none;" class="fade-in chat-container">
             <div class="chat-header panel glass">
                 <button id="back-btn" class="icon-btn secondary-btn">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
                     Wróć
                 </button>
                 <div class="chat-info">
@@ -61,10 +61,32 @@
             </div>
             
             <div id="posts-list"></div>
+            
+            <!-- Ktoś pisze (Typing indicator) -->
+            <div id="typing-indicator" class="dosis-text hidden"></div>
 
-            <div class="input-area panel glass">
-                <textarea id="new-post-content" class="dosis-text" placeholder="Napisz anonimowo..."></textarea>
-                <button id="send-post-btn" class="glow-btn">Wyślij</button>
+            <div class="input-area panel glass relative">
+                <!-- UI Tworzenia Ankiety (Ukryte) -->
+                <div id="poll-creator" class="hidden">
+                    <h4 style="margin-top:0; color:var(--accent);">Tworzenie ankiety</h4>
+                    <input type="text" id="poll-question" class="dosis-text" placeholder="Pytanie...">
+                    <input type="text" id="poll-opt1" class="dosis-text poll-opt" placeholder="Opcja 1...">
+                    <input type="text" id="poll-opt2" class="dosis-text poll-opt" placeholder="Opcja 2...">
+                    <div class="action-buttons" style="margin-bottom:15px;">
+                        <button id="cancel-poll-btn" class="secondary-btn">Anuluj</button>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px;">
+                    <textarea id="new-post-content" class="dosis-text" placeholder="Napisz anonimowo..."></textarea>
+                </div>
+                
+                <div class="action-buttons" style="margin-top:10px;">
+                    <button id="toggle-poll-btn" class="icon-btn secondary-btn" style="width: auto;" title="Ankieta">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                    </button>
+                    <button id="send-post-btn" class="glow-btn">Wyślij</button>
+                </div>
             </div>
         </div>
     </div>
