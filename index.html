@@ -49,24 +49,21 @@
 
         <!-- Ekran Wątku (Czat) -->
         <div id="chat-screen" style="display: none;" class="fade-in chat-container">
-            <div class="chat-header panel glass">
-                <button id="back-btn" class="icon-btn secondary-btn">
+            
+            <!-- Górny pasek z samym przyciskiem "Wróć" -->
+            <div class="top-bar">
+                <button id="back-btn" class="icon-btn secondary-btn glass">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
                     Wróć
                 </button>
-                <div class="chat-info">
-                    <h2 id="current-thread-title" class="dosis-text">Tytuł</h2>
-                    <p id="current-thread-desc" class="dosis-text">Opis</p>
-                </div>
             </div>
             
+            <!-- Lista postów, gdzie Tytuł i Opis lądują na samej górze -->
             <div id="posts-list"></div>
             
-            <!-- Ktoś pisze (Typing indicator) -->
             <div id="typing-indicator" class="dosis-text hidden"></div>
 
             <div class="input-area panel glass relative">
-                <!-- UI Tworzenia Ankiety (Ukryte) -->
                 <div id="poll-creator" class="hidden">
                     <h4 style="margin-top:0; color:var(--accent);">Tworzenie ankiety</h4>
                     <input type="text" id="poll-question" class="dosis-text" placeholder="Pytanie...">
