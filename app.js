@@ -120,7 +120,7 @@ document.getElementById('login-btn').addEventListener('click', () => {
     if (pw === GLOBAL_PASSWORD || pw === ADMIN_PASSWORD) {
         if (pw === ADMIN_PASSWORD) isAdmin = true;
         loginScreen.style.display = 'none';
-        threadsScreen.style.display = 'flex'; // Zmiana na flex dla nowego układu
+        threadsScreen.style.display = 'flex';
         loadThreads();
     } else { document.getElementById('login-error').style.display = 'block'; }
 });
@@ -199,11 +199,15 @@ function loadThreads() {
 
 function openThread(threadId, title, desc) {
     currentThreadId = threadId;
-    threadsScreen.style.display = 'none'; 
-    chatScreen.style.display = 'flex'; // Trzyma sztywny układ
-    document.getElementById('current-thread-title').innerText = title;
-    document.getElementById('current-thread-desc').innerText = desc;
-    postsList.innerHTML = ''; 
+    threadsScreen.style.display = 'none'; chatScreen.style.display = 'flex';
+    
+    // TWORZYMY INLINE HEADER WEWNĄTRZ LISTY CZATU
+    postsList.innerHTML = `
+        <div class="inline-header fade-in">
+            <h2 class="dosis-text">${title}</h2>
+            <p class="dosis-text">${desc}</p>
+        </div>
+    `; 
     
     if (unsubscribeTyping) unsubscribeTyping();
     unsubscribeTyping = onSnapshot(collection(db, `threads/${threadId}/typing`), (snapshot) => {
@@ -253,7 +257,7 @@ function openThread(threadId, title, desc) {
     });
 }
 
-// CAŁKOWICIE USUNIĘTO SKRYPT DO CHOWANIA NAGŁÓWKA
+// CAŁKOWICIE USUNIĘTO SKRYPT DO NASŁUCHIWANIA PRZEWIJANIA (Koniec problemów ze skakaniem)
 
 document.getElementById('back-btn').addEventListener('click', () => {
     chatScreen.style.display = 'none'; threadsScreen.style.display = 'flex';
@@ -307,7 +311,6 @@ document.getElementById('send-post-btn').addEventListener('click', async () => {
     }
 
     await updateDoc(doc(db, "threads", currentThreadId), { updatedAt: serverTimestamp() });
-    
     setTimeout(() => { postsList.scrollTop = postsList.scrollHeight; }, 100);
 });
 
