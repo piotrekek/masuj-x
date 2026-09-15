@@ -21,12 +21,12 @@ body {
 
 .dosis-text { font-family: 'Dosis', sans-serif; letter-spacing: 0.5px; }
 
-#app { width: 100%; max-width: 600px; position: relative; z-index: 1; }
+#app { width: 100%; max-width: 600px; position: relative; z-index: 1; height: calc(100vh - 40px); display: flex; flex-direction: column; }
 
 header h1 {
     text-align: center; font-size: 2.2rem; font-weight: 600; margin-bottom: 30px;
     letter-spacing: -1px; background: linear-gradient(135deg, #ffffff 0%, #888888 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; flex-shrink: 0;
 }
 
 .glass {
@@ -62,12 +62,17 @@ button:active { transform: scale(0.95); }
 .threads-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .threads-header h2 { margin: 0; font-weight: 600; letter-spacing: -0.5px; }
 
+/* Lista wątków (strona główna) ma się przewijać naturalnie, więc dajemy jej elastyczność */
+#threads-screen { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+#threads-list { overflow-y: auto; flex: 1; padding-bottom: 20px; scrollbar-width: none; }
+#threads-list::-webkit-scrollbar { display: none; }
+
 .thread-item {
     background: linear-gradient(145deg, rgba(38, 38, 40, 0.6), rgba(28, 28, 30, 0.6));
     backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--border-color); border-radius: 18px; padding: 20px 22px; margin-bottom: 15px;
     cursor: pointer; transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
-    position: relative; z-index: 1; /* Bazowa warstwa dla naprawy uciętych emotek */
+    position: relative; z-index: 1;
 }
 .thread-item:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.3); }
 .thread-item h3 { margin: 0 0 8px 0; font-size: 1.45rem; font-weight: 700; color: var(--accent); transition: color 0.3s; }
@@ -80,24 +85,28 @@ button:active { transform: scale(0.95); }
 }
 .thread-item.unread-highlight h3 { color: #ffffff; text-shadow: 0 2px 10px rgba(255, 255, 255, 0.4); }
 
-.chat-container { display: flex; flex-direction: column; height: 90vh; }
+/* --- NOWY, SZTYWNY UKŁAD CZATU --- */
+.chat-container { display: flex; flex-direction: column; height: 100%; flex: 1; overflow: hidden; }
 
-/* NAPRAWIONE: Gładsze chowanie nagłówka bez rzucania ekranem */
+/* Nagłówek jest teraz na sztywno przyklejony i się nie chowa */
 .chat-header {
-    margin-bottom: 20px; padding: 18px; 
-    transition: max-height 0.35s ease, padding 0.35s ease, margin 0.35s ease, opacity 0.3s ease, border-color 0.3s ease;
-    transform-origin: top; max-height: 200px; opacity: 1; flex-shrink: 0;
-    overflow: hidden; /* Konieczne, by elementy wewnątrz nie wystawały przy zwijaniu */
-}
-.chat-header.hidden-header { 
-    max-height: 0; padding-top: 0; padding-bottom: 0; margin-bottom: 0; 
-    opacity: 0; border-color: transparent; 
+    margin-bottom: 15px; padding: 18px; flex-shrink: 0; z-index: 10;
 }
 .chat-info h2 { margin: 0; font-weight: 700; font-size: 1.6rem; color: var(--accent); }
 .chat-info p { margin: 8px 0 0 0; color: #f5f5f7; font-size: 1.2rem; font-weight: 500; }
 
-#posts-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; padding-bottom: 20px; scrollbar-width: none; }
+/* Obszar postów ma sztywną wysokość i własny suwak */
+#posts-list { 
+    flex: 1; overflow-y: auto; display: flex; flex-direction: column; 
+    gap: 18px; padding-bottom: 20px; scrollbar-width: none; 
+    -webkit-overflow-scrolling: touch; /* Płynny scroll na iOS */
+}
 #posts-list::-webkit-scrollbar { display: none; }
+
+/* Sekcja wpisywania przyklejona na dole */
+.input-area { flex-shrink: 0; margin-bottom: 0; }
+/* ---------------------------------- */
+
 
 .post-item {
     max-width: 90%; width: fit-content; padding: 16px 20px; border-radius: 22px;
