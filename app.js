@@ -2,6 +2,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebas
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, arrayUnion, arrayRemove, setDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 
 // --- WKLEJ TUTAJ SWOJĄ KONFIGURACJĘ FIREBASE ---
+
+// --- WKLEJ TUTAJ SWOJĄ KONFIGURACJĘ FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyABtkPUzR9q6RG0nqONAKFb4ECxDRjAqyI",
   authDomain: "masuj-x-db.firebaseapp.com",
@@ -13,6 +15,9 @@ const firebaseConfig = {
 };
 // ------------------------------------------------
 
+
+// ------------------------------------------------
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
@@ -20,7 +25,6 @@ const GLOBAL_PASSWORD = "masuj";
 const ADMIN_PASSWORD = "889c";
 let isAdmin = false;
 
-// NOWE: Rozwiązanie problemu nowych użytkowników
 let firstVisit = localStorage.getItem('masuj_x_first_visit');
 if (!firstVisit) {
     firstVisit = Date.now();
@@ -35,6 +39,7 @@ if (!myUserId) {
 }
 const myUserAgent = navigator.userAgent;
 
+// --- ULEPSZONY SYSTEM KOLORÓW (Bardziej różnorodne odcienie) ---
 function hslToHex(h, s, l) {
     l /= 100; const a = s * Math.min(l, 1 - l) / 100;
     const f = n => {
@@ -47,10 +52,23 @@ function hslToHex(h, s, l) {
 
 function generateColor(userId, threadId) {
     const str = userId + threadId;
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); }
-    return hslToHex(Math.abs(hash) % 360, 85, 65); 
+    let hash = 0x811c9dc5; 
+    for (let i = 0; i < str.length; i++) { 
+        hash ^= str.charCodeAt(i);
+        hash = (hash * 0x01000193) >>> 0; 
+    }
+    const h = hash % 360;
+    const s = 65 + ((hash >> 8) % 30);  // Nasycenie 65-95%
+    const l = 55 + ((hash >> 16) % 20); // Jasność 55-75%
+    return hslToHex(h, s, l); 
 }
+
+function formatTime(timestamp) {
+    if (!timestamp) return 'Przed chwilą';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp.toMillis ? timestamp.toMillis() : timestamp);
+    return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' }) + ', ' + date.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+}
+// -----------------------------------------------------------------
 
 const loginScreen = document.getElementById('login-screen');
 const threadsScreen = document.getElementById('threads-screen');
@@ -89,15 +107,12 @@ function generateReactionsHTML(reactionsObj, docId) {
     return html;
 }
 
-// NOWE: Zamienia tekst na linki lub odtwarzacze YouTube
 function parseLinks(text) {
-    // Sprawdza czy jest link do YouTube
     const ytMatch = text.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
     if (ytMatch) {
-        const cleanText = text.replace(ytMatch[0], ''); // Usuwa surowy link z tekstu
+        const cleanText = text.replace(ytMatch[0], '');
         return cleanText + `<iframe width="100%" height="200" style="border-radius:12px; margin-top:10px; border:none;" src="https://www.youtube.com/embed/${ytMatch[1]}" allowfullscreen></iframe>`;
     }
-    // Zwykłe linki
     return text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
 }
 
@@ -108,7 +123,6 @@ function renderPostHTML(data, docId) {
         contentHTML = `<div class="poll-container dosis-text"><div class="poll-question">${data.poll.question}</div>`;
         let totalVotes = 0;
         data.poll.options.forEach(opt => totalVotes += (opt.votes ? opt.votes.length : 0));
-
         data.poll.options.forEach((opt, index) => {
             const votes = opt.votes ? opt.votes.length : 0;
             const percent = totalVotes === 0 ? 0 : Math.round((votes / totalVotes) * 100);
@@ -121,7 +135,6 @@ function renderPostHTML(data, docId) {
         });
         contentHTML += `</div>`;
     } 
-    // NOWE: Renderowanie zdjęcia
     else if (data.type === 'image') {
         contentHTML = `
             <div class="img-wrapper">
@@ -137,11 +150,24 @@ function renderPostHTML(data, docId) {
         contentHTML = `<div class="post-content dosis-text">${parseLinks(data.text)}</div>`;
     }
 
-    let adminHTML = isAdmin && data.userAgent ? `<div class="admin-badge">📱 ${data.userAgent}</div>` : '';
+    let adminHTML = '';
+    if (isAdmin) {
+        let uAgent = data.userAgent ? `📱 ${data.userAgent}` : 'Brak danych';
+        adminHTML = `
+            <div class="admin-controls">
+                <div class="admin-badge">${uAgent}</div>
+                <button class="admin-delete-btn" data-type="post" data-id="${docId}">🗑️ Usuń</button>
+            </div>
+        `;
+    }
+
+    const timeStr = formatTime(data.createdAt);
+
     return `
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+        <div class="post-header-flex">
             <div style="width: 10px; height: 10px; border-radius: 50%; background-color: ${data.color}; box-shadow: 0 0 10px ${data.color};"></div>
             <span class="dosis-text" style="font-size: 0.95rem; color: ${data.color}; font-weight: 700; letter-spacing: 1px;">${data.color}</span>
+            <span class="timestamp dosis-text">${timeStr}</span>
         </div>
         ${contentHTML}
         ${generateReactionsHTML(data.reactions || {}, docId)}
@@ -201,14 +227,13 @@ function loadThreads() {
             else threadTime = Date.now(); 
 
             const lastRead = readTimestamps[docId] || 0;
-            // NOWE: Wątek świeci się tylko, jeśli data aktualizacji jest nowsza niż pierwsze wejście na forum
             if (threadTime > lastRead && threadTime > firstVisit) { isUnread = true; }
             
             div.className = `thread-item fade-in ${isUnread ? 'unread-highlight' : ''}`;
             div.id = `thread-${docId}`;
             
             div.addEventListener('click', (e) => {
-                if (e.target.closest('.reaction-badge') || e.target.closest('.react-add-btn') || e.target.closest('.reaction-menu')) return;
+                if (e.target.closest('.reaction-badge') || e.target.closest('.react-add-btn') || e.target.closest('.reaction-menu') || e.target.closest('.admin-delete-btn')) return;
                 
                 readTimestamps[docId] = Date.now();
                 localStorage.setItem('masuj_x_read_timestamps', JSON.stringify(readTimestamps));
@@ -217,10 +242,24 @@ function loadThreads() {
                 openThread(docId, data.title, data.description);
             });
             
-            let adminHTML = isAdmin && data.userAgent ? `<div class="admin-badge">📱 ${data.userAgent}</div>` : '';
+            let adminHTML = '';
+            if (isAdmin) {
+                let uAgent = data.userAgent ? `📱 ${data.userAgent}` : 'Brak danych';
+                adminHTML = `
+                    <div class="admin-controls">
+                        <div class="admin-badge">${uAgent}</div>
+                        <button class="admin-delete-btn" data-type="thread" data-id="${docId}">🗑️ Usuń Wątek</button>
+                    </div>
+                `;
+            }
+
+            const timeStr = formatTime(data.createdAt);
             
             div.innerHTML = `
-                <h3 class="dosis-text" style="margin-bottom: 0;">${data.title}</h3>
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <h3 class="dosis-text" style="margin-bottom: 0;">${data.title}</h3>
+                    <span class="timestamp dosis-text" style="margin-left:10px;">${timeStr}</span>
+                </div>
                 <div style="margin-top: 12px;">
                     ${generateReactionsHTML(data.reactions || {}, docId)}
                 </div>
@@ -238,13 +277,11 @@ function openThread(threadId, title, desc) {
     postsList.innerHTML = `
         <div class="inline-header fade-in">
             <h2 class="dosis-text">${title}</h2>
-            <!-- Tu dodano licznik widzów -->
             <div id="live-viewers" class="live-badge dosis-text hidden"></div>
             <p class="dosis-text">${desc}</p>
         </div>
     `; 
     
-    // NOWE: Logika Obecności (Live Viewers)
     const presenceRef = doc(db, `threads/${threadId}/presence`, myUserId);
     setDoc(presenceRef, { time: Date.now() });
     presenceInterval = setInterval(() => { if(currentThreadId === threadId) setDoc(presenceRef, { time: Date.now() }); }, 10000);
@@ -260,7 +297,6 @@ function openThread(threadId, title, desc) {
         } else { viewerBadge.classList.add('hidden'); }
     });
     
-    // TYPING INDICATOR
     if (unsubscribeTyping) unsubscribeTyping();
     unsubscribeTyping = onSnapshot(collection(db, `threads/${threadId}/typing`), (snapshot) => {
         const typingUsers = [];
@@ -283,15 +319,27 @@ function openThread(threadId, title, desc) {
             
             if (change.type === "added" || change.type === "modified") {
                 if (change.type === "added") addedNew = true;
+                
                 let div = document.getElementById(`post-${docId}`);
-                if (!div) {
+                let wasRevealed = false; // PAMIĘĆ ZDJĘCIA
+                
+                if (div) {
+                    const imgWrap = div.querySelector('.img-wrapper');
+                    if (imgWrap && imgWrap.classList.contains('revealed')) wasRevealed = true;
+                } else {
                     div = document.createElement('div');
                     div.className = 'post-item'; div.id = `post-${docId}`;
                     postsList.appendChild(div);
                 }
+                
                 div.style.borderLeft = `4px solid ${data.color}`;
                 div.style.boxShadow = `-4px 0px 18px -5px ${data.color}, 0 8px 24px rgba(0,0,0,0.4)`;
                 div.innerHTML = renderPostHTML(data, docId);
+                
+                if (wasRevealed) {
+                    const newImgWrap = div.querySelector('.img-wrapper');
+                    if (newImgWrap) newImgWrap.classList.add('revealed');
+                }
             }
             if (change.type === "removed") {
                 const div = document.getElementById(`post-${docId}`);
@@ -310,7 +358,7 @@ function openThread(threadId, title, desc) {
 }
 
 document.getElementById('back-btn').addEventListener('click', () => {
-    if (currentThreadId) deleteDoc(doc(db, `threads/${currentThreadId}/presence`, myUserId)); // Wyjście = usunięcie obecności
+    if (currentThreadId) deleteDoc(doc(db, `threads/${currentThreadId}/presence`, myUserId));
     clearInterval(presenceInterval);
     
     chatScreen.style.display = 'none'; threadsScreen.style.display = 'flex';
@@ -329,11 +377,9 @@ document.getElementById('new-post-content').addEventListener('input', () => {
     typingTimeout = setTimeout(() => { deleteDoc(doc(db, `threads/${currentThreadId}/typing`, myUserId)); }, 2000);
 });
 
-// UI Ankiety
 document.getElementById('toggle-poll-btn').addEventListener('click', () => { document.getElementById('poll-creator').classList.toggle('hidden'); });
 document.getElementById('cancel-poll-btn').addEventListener('click', () => { document.getElementById('poll-creator').classList.add('hidden'); });
 
-// NOWE: Wgrywanie zdjęcia (Przycisk i kompresja Canvas)
 document.getElementById('trigger-image-btn').addEventListener('click', () => {
     document.getElementById('image-upload').click();
 });
@@ -347,7 +393,6 @@ document.getElementById('image-upload').addEventListener('change', (e) => {
     reader.onload = (event) => {
         const img = new Image();
         img.onload = async () => {
-            // Kompresja by nie zapchać bazy (max 800px szerokości)
             const canvas = document.createElement('canvas');
             const MAX_WIDTH = 800;
             let width = img.width; let height = img.height;
@@ -356,7 +401,7 @@ document.getElementById('image-upload').addEventListener('change', (e) => {
             
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.6); // 60% jakości
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.6); 
 
             const color = generateColor(myUserId, currentThreadId);
             await addDoc(collection(db, "threads", currentThreadId, "posts"), {
@@ -368,9 +413,8 @@ document.getElementById('image-upload').addEventListener('change', (e) => {
         img.src = event.target.result;
     };
     reader.readAsDataURL(file);
-    e.target.value = ''; // Czyszczenie inputa
+    e.target.value = ''; 
 });
-
 
 document.getElementById('send-poll-btn').addEventListener('click', async () => {
     if (!currentThreadId) return;
@@ -415,7 +459,20 @@ document.getElementById('send-post-btn').addEventListener('click', async () => {
 });
 
 document.addEventListener('click', async (e) => {
-    // NOWE: Odkrywanie zdjęcia (Tap to reveal)
+    // --- AKCJE ADMINA ---
+    const deleteBtn = e.target.closest('.admin-delete-btn');
+    if (deleteBtn) {
+        const id = deleteBtn.getAttribute('data-id');
+        const type = deleteBtn.getAttribute('data-type');
+        if (confirm("Usunąć bezpowrotnie?")) {
+            try {
+                if (type === 'thread') await deleteDoc(doc(db, "threads", id));
+                else if (type === 'post' && currentThreadId) await deleteDoc(doc(db, "threads", currentThreadId, "posts", id));
+            } catch(err) { console.error(err); }
+        }
+        return;
+    }
+
     const imgWrap = e.target.closest('.img-wrapper');
     if (imgWrap) {
         imgWrap.classList.toggle('revealed');
@@ -482,8 +539,6 @@ document.addEventListener('click', async (e) => {
         try {
             if (isBadgeAndActive) await updateDoc(ref, { [updateField]: arrayRemove(myUserId) });
             else await updateDoc(ref, { [updateField]: arrayUnion(myUserId) });
-            
-            // UWAGA: Usunięto tutaj updateDoc updatedAt. Lajki NIE podbijają już tematu i go nie podświetlają!
         } catch(err) { console.error("Error", err); }
         
         closeReactionMenu();
@@ -495,10 +550,8 @@ document.addEventListener('click', async (e) => {
     }
 });
 
-// Czyszczenie obecności na wypadek zamknięcia karty w przeglądarce
 window.addEventListener("beforeunload", () => {
     if (currentThreadId) {
-        // Używamy tzw. sendBeacon lub prostej próby usunięcia by nie śmiecić bazy
         deleteDoc(doc(db, `threads/${currentThreadId}/presence`, myUserId));
     }
 });
