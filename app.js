@@ -14,8 +14,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const GLOBAL_PASSWORD = "masuj"; 
-const ADMIN_PASSWORD = "889c";
 let isAdmin = false;
 
 let firstVisit = localStorage.getItem('masuj_x_first_visit');
@@ -36,7 +34,6 @@ const AVAILABLE_EMOJIS = ['❤️', '👍', '😂', '👎', '❓', '🔥', '💀
 let replyingTo = null;
 let myPoints = 0;
 
-// Synchronizacja punktów użytkownika z bazy
 onSnapshot(doc(db, "users", myUserId), (docSnap) => {
     if (docSnap.exists()) {
         myPoints = docSnap.data().points || 0;
@@ -192,15 +189,42 @@ function renderPostHTML(data, docId) {
     `;
 }
 
-document.getElementById('login-btn').addEventListener('click', () => {
-    const pw = document.getElementById('password-input').value;
-    if (pw === GLOBAL_PASSWORD || pw === ADMIN_PASSWORD) {
-        if (pw === ADMIN_PASSWORD) isAdmin = true;
-        loginScreen.style.display = 'none';
-        threadsScreen.style.display = 'flex';
-        document.getElementById('profile-points-badge').classList.remove('hidden');
-        loadThreads();
-    } else { document.getElementById('login-error').style.display = 'block'; }
+// SPRAWDZANIE HASŁA ONLINE Z FIREBASE (kolekcja settings, dokument auth)
+document.getElementById('login-btn').addEventListener('click', async () => {
+    const pw = document.getElementById('password-input').value.trim();
+    if (!pw) return;
+
+    try {
+        const authRef = doc(db, 'settings', 'auth');
+        const authSnap = await getDoc(authRef);
+
+        if (authSnap.exists()) {
+            const data = authSnap.data();
+            const dbGlobal = data.globalPassword;
+            const dbAdmin = data.adminPassword;
+
+            if (pw === dbAdmin) {
+                isAdmin = true;
+                loginScreen.style.display = 'none';
+                threadsScreen.style.display = 'flex';
+                document.getElementById('profile-points-badge').classList.remove('hidden');
+                loadThreads();
+            } else if (pw === dbGlobal) {
+                isAdmin = false;
+                loginScreen.style.display = 'none';
+                threadsScreen.style.display = 'flex';
+                document.getElementById('profile-points-badge').classList.remove('hidden');
+                loadThreads();
+            } else {
+                document.getElementById('login-error').style.display = 'block';
+            }
+        } else {
+            alert("Brak skonfigurowanych haseł w bazie (kolekcja settings/auth).");
+        }
+    } catch (err) {
+        console.error("Błąd logowania online:", err);
+        document.getElementById('login-error').style.display = 'block';
+    }
 });
 
 document.getElementById('show-new-thread-btn').addEventListener('click', () => {
@@ -583,8 +607,6 @@ document.addEventListener('click', async (e) => {
     const replyActionBtn = e.target.closest('.reaction-menu-reply-btn');
     if (replyActionBtn) {
         const postId = replyActionBtn.getAttribute('data-reply-id');
-        const postDiv = document.getElementById(`post-${postId}`);
-        // Pobieramy dane wiadomości do odpowiedzi
         const postRef = doc(db, "threads", currentThreadId, "posts", postId);
         const docSnap = await getDoc(postRef);
         if (docSnap.exists()) {
@@ -613,7 +635,6 @@ document.addEventListener('click', async (e) => {
                 await updateDoc(ref, { [updateField]: arrayRemove(myUserId) });
             } else {
                 await updateDoc(ref, { [updateField]: arrayUnion(myUserId) });
-                // Przyznawanie punktów autorowi za reakcję
                 const docSnap = await getDoc(ref);
                 if (docSnap.exists() && docSnap.data().authorId && docSnap.data().authorId !== myUserId) {
                     await setDoc(doc(db, "users", docSnap.data().authorId), { points: increment(1) }, { merge: true });
