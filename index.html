@@ -13,25 +13,94 @@
         <div class="panel glass" style="max-width: 400px; width: 100%;">
             <h2 style="color: var(--accent); font-size: 1.8rem; margin-top: 0; margin-bottom: 15px;" class="dosis-text">masuj <span style="color:#fff">x</span></h2>
             <h3 style="color: #fff; font-size: 1.3rem; margin-bottom: 10px;" class="dosis-text">Wykryto system Android</h3>
-            <p style="color: var(--text-muted); font-size: 1.05rem; margin-bottom: 20px; line-height: 1.5;" class="dosis-text">
-                Dla Androida dostępna jest dedykowana aplikacja mobilna z obsługą powiadomień. 
+            <p style="color: var(--text-muted); font-size: 1.05rem; margin-bottom: 15px; line-height: 1.5;" class="dosis-text">
+                Na telefonie z Androidem korzystaj z dedykowanej aplikacji mobilnej.
             </p>
             <div style="background: rgba(255, 159, 10, 0.1); border: 1px solid rgba(255, 159, 10, 0.3); padding: 12px; border-radius: 12px; color: var(--accent); font-weight: 600; font-size: 0.95rem; margin-bottom: 15px;" class="dosis-text">
                 Chcesz aplikację? Zgłoś się do administratora.
             </div>
-            <div style="font-size: 0.85rem; color: var(--text-muted);" class="dosis-text">
-                Na telefonie z Androidem korzystaj z aplikacji, a tę stronę otwórz na komputerze lub iOS.
+
+            <button id="show-code-btn" class="glow-btn" style="margin-bottom: 10px;">Mam kod od administratora</button>
+            
+            <div id="download-code-box" class="hidden" style="margin-top: 15px;">
+                <input type="password" id="apk-code-input" class="dosis-text" placeholder="Wpisz kod..." style="margin-bottom: 10px;">
+                <button id="verify-code-btn" class="secondary-btn" style="background-color: var(--accent); color: #000;">Sprawdź kod</button>
+                <p id="code-error" style="color: #ff453a; font-size: 0.9rem; margin-top: 5px; display: none;">Nieprawidłowy kod!</p>
+            </div>
+
+            <div id="download-link-box" class="hidden" style="margin-top: 15px;">
+                <a id="apk-download-anchor" href="TUTAJ_WKLEJ_LINK_DO_APEX_LUB_APK" target="_blank" class="glow-btn" style="display: block; text-decoration: none; padding: 12px; text-align: center;">Pobierz plik APK</a>
             </div>
         </div>
     </div>
 
-    <script>
+    <!-- Skrypt sprawdzający kod online przez Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyABtkPUzR9q6RG0nqONAKFb4ECxDRjAqyI",
+          authDomain: "masuj-x-db.firebaseapp.com",
+          projectId: "masuj-x-db",
+          storageBucket: "masuj-x-db.firebasestorage.app",
+          messagingSenderId: "790553642823",
+          appId: "1:790553642823:web:e7e70e0512f08fbe372e62",
+          measurementId: "G-X4X10D5FGS"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
         if (/android/i.test(navigator.userAgent)) {
             document.addEventListener("DOMContentLoaded", () => {
                 const blockScreen = document.getElementById('android-block-screen');
                 const appDiv = document.getElementById('app');
                 if (blockScreen) blockScreen.style.display = 'flex';
                 if (appDiv) appDiv.style.display = 'none';
+
+                const showCodeBtn = document.getElementById('show-code-btn');
+                const codeBox = document.getElementById('download-code-box');
+                const verifyBtn = document.getElementById('verify-code-btn');
+                const codeInput = document.getElementById('apk-code-input');
+                const codeError = document.getElementById('code-error');
+                const downloadBox = document.getElementById('download-link-box');
+
+                showCodeBtn.addEventListener('click', () => {
+                    showCodeBtn.style.display = 'none';
+                    codeBox.classList.remove('hidden');
+                });
+
+                verifyBtn.addEventListener('click', async () => {
+                    const enteredCode = codeInput.value.trim();
+                    try {
+                        const docRef = doc(db, 'settings', 'auth');
+                        const docSnap = await getDoc(docRef);
+                        
+                        let correctCode = "gejtos69"; // Domyślny zapas
+                        if (docSnap.exists() && docSnap.data().apkCode) {
+                            correctCode = docSnap.data().apkCode;
+                        }
+
+                        if (enteredCode === correctCode) {
+                            codeBox.style.display = 'none';
+                            downloadBox.classList.remove('hidden');
+                            codeError.style.display = 'none';
+                        } else {
+                            codeError.style.display = 'block';
+                        }
+                    } catch (err) {
+                        console.error("Błąd weryfikacji kodu:", err);
+                        // Fallback w razie problemów z siecią
+                        if (enteredCode === "gejtos69") {
+                            codeBox.style.display = 'none';
+                            downloadBox.classList.remove('hidden');
+                            codeError.style.display = 'none';
+                        } else {
+                            codeError.style.display = 'block';
+                        }
+                    }
+                });
             });
         }
     </script>
@@ -87,7 +156,6 @@
             <div id="typing-indicator" class="hidden"></div>
 
             <div class="input-area panel glass relative">
-                <!-- Baner odpowiedzi na wiadomość -->
                 <div id="replying-banner" class="hidden reply-banner">
                     <span id="replying-text" class="dosis-text">Odpowiadasz...</span>
                     <button id="cancel-reply-btn" class="cancel-reply-x">✕</button>
