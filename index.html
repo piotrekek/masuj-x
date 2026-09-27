@@ -8,12 +8,43 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Ekran blokady dla użytkowników Androida w przeglądarce -->
+    <div id="android-block-screen" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; justify-content: center; align-items: center; flex-direction: column; text-align: center; background: rgba(3, 3, 3, 0.98); padding: 20px; box-sizing: border-box;">
+        <div class="panel glass" style="max-width: 400px; width: 100%;">
+            <h2 style="color: var(--accent); font-size: 1.8rem; margin-top: 0; margin-bottom: 15px;" class="dosis-text">masuj <span style="color:#fff">x</span></h2>
+            <h3 style="color: #fff; font-size: 1.3rem; margin-bottom: 10px;" class="dosis-text">Wykryto system Android</h3>
+            <p style="color: var(--text-muted); font-size: 1.05rem; margin-bottom: 20px; line-height: 1.5;" class="dosis-text">
+                Dla Androida dostępna jest dedykowana aplikacja mobilna z obsługą powiadomień. 
+            </p>
+            <div style="background: rgba(255, 159, 10, 0.1); border: 1px solid rgba(255, 159, 10, 0.3); padding: 12px; border-radius: 12px; color: var(--accent); font-weight: 600; font-size: 0.95rem; margin-bottom: 15px;" class="dosis-text">
+                Chcesz aplikację? Zgłoś się do administratora.
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);" class="dosis-text">
+                Na telefonie z Androidem korzystaj z aplikacji, a tę stronę otwórz na komputerze lub iOS.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if (/android/i.test(navigator.userAgent)) {
+            document.addEventListener("DOMContentLoaded", () => {
+                const blockScreen = document.getElementById('android-block-screen');
+                const appDiv = document.getElementById('app');
+                if (blockScreen) blockScreen.style.display = 'flex';
+                if (appDiv) appDiv.style.display = 'none';
+            });
+        }
+    </script>
+
     <div class="ambient-light light-1"></div>
     <div class="ambient-light light-2"></div>
 
     <div id="app">
-        <header>
+        <header class="app-main-header">
             <h1>masuj x</h1>
+            <div id="profile-points-badge" class="profile-badge glass hidden dosis-text" title="Twoje punkty">
+                👤 <span id="my-points-val">0</span> pkt
+            </div>
         </header>
 
         <div id="login-screen" class="panel fade-in glass">
@@ -56,6 +87,12 @@
             <div id="typing-indicator" class="hidden"></div>
 
             <div class="input-area panel glass relative">
+                <!-- Baner odpowiedzi na wiadomość -->
+                <div id="replying-banner" class="hidden reply-banner">
+                    <span id="replying-text" class="dosis-text">Odpowiadasz...</span>
+                    <button id="cancel-reply-btn" class="cancel-reply-x">✕</button>
+                </div>
+
                 <div id="poll-creator" class="hidden">
                     <h4 style="margin-top:0; color:var(--accent);">Tworzenie ankiety</h4>
                     <input type="text" id="poll-question" class="dosis-text" placeholder="Pytanie...">

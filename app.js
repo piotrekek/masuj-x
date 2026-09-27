@@ -1,9 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, arrayUnion, arrayRemove, setDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, arrayUnion, arrayRemove, setDoc, deleteDoc, getDoc, increment } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 
-// --- WKLEJ TUTAJ SWOJĄ KONFIGURACJĘ FIREBASE ---
-
-// --- WKLEJ TUTAJ SWOJĄ KONFIGURACJĘ FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyABtkPUzR9q6RG0nqONAKFb4ECxDRjAqyI",
   authDomain: "masuj-x-db.firebaseapp.com",
@@ -13,10 +10,6 @@ const firebaseConfig = {
   appId: "1:790553642823:web:e7e70e0512f08fbe372e62",
   measurementId: "G-X4X10D5FGS"
 };
-// ------------------------------------------------
-
-
-// ------------------------------------------------
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -39,7 +32,19 @@ if (!myUserId) {
 }
 const myUserAgent = navigator.userAgent;
 
-// --- ULEPSZONY SYSTEM KOLORÓW (Bardziej różnorodne odcienie) ---
+const AVAILABLE_EMOJIS = ['❤️', '👍', '😂', '👎', '❓', '🔥', '💀', '👀', '🎉', '😡'];
+let replyingTo = null;
+let myPoints = 0;
+
+// Synchronizacja punktów użytkownika z bazy
+onSnapshot(doc(db, "users", myUserId), (docSnap) => {
+    if (docSnap.exists()) {
+        myPoints = docSnap.data().points || 0;
+        const ptsEl = document.getElementById('my-points-val');
+        if (ptsEl) ptsEl.textContent = myPoints;
+    }
+});
+
 function hslToHex(h, s, l) {
     l /= 100; const a = s * Math.min(l, 1 - l) / 100;
     const f = n => {
@@ -58,8 +63,8 @@ function generateColor(userId, threadId) {
         hash = (hash * 0x01000193) >>> 0; 
     }
     const h = hash % 360;
-    const s = 65 + ((hash >> 8) % 30);  // Nasycenie 65-95%
-    const l = 55 + ((hash >> 16) % 20); // Jasność 55-75%
+    const s = 65 + ((hash >> 8) % 30);  
+    const l = 55 + ((hash >> 16) % 20); 
     return hslToHex(h, s, l); 
 }
 
@@ -68,7 +73,6 @@ function formatTime(timestamp) {
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp.toMillis ? timestamp.toMillis() : timestamp);
     return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' }) + ', ' + date.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
 }
-// -----------------------------------------------------------------
 
 const loginScreen = document.getElementById('login-screen');
 const threadsScreen = document.getElementById('threads-screen');
@@ -94,9 +98,8 @@ function closeReactionMenu() {
 }
 
 function generateReactionsHTML(reactionsObj, docId) {
-    const emojiList = ['❤️', '👍', '😂', '👎', '❓'];
     let html = `<div class="reactions-container">`;
-    emojiList.forEach(emoji => {
+    AVAILABLE_EMOJIS.forEach(emoji => {
         const users = reactionsObj[emoji] || [];
         if (users.length > 0) {
             const active = users.includes(myUserId) ? 'active' : '';
@@ -108,6 +111,7 @@ function generateReactionsHTML(reactionsObj, docId) {
 }
 
 function parseLinks(text) {
+    if (!text) return '';
     const ytMatch = text.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
     if (ytMatch) {
         const cleanText = text.replace(ytMatch[0], '');
@@ -117,8 +121,20 @@ function parseLinks(text) {
 }
 
 function renderPostHTML(data, docId) {
+    let replyHTML = '';
+    if (data.replyTo) {
+        let repText = data.replyTo.text || '';
+        if (data.replyTo.type === 'image') repText = 'Obraz 📷';
+        if (data.replyTo.type === 'poll') repText = 'Ankieta 📊';
+        replyHTML = `
+            <div class="reply-preview-box" style="border-left-color: ${data.replyTo.color || '#fff'}">
+                <span style="font-weight:700; color:${data.replyTo.color || '#fff'}">${data.replyTo.color || 'Odp'}</span>
+                <div style="color:#ccc; font-size:0.9rem;" class="dosis-text">${repText}</div>
+            </div>
+        `;
+    }
+
     let contentHTML = '';
-    
     if (data.type === 'poll') {
         contentHTML = `<div class="poll-container dosis-text"><div class="poll-question">${data.poll.question}</div>`;
         let totalVotes = 0;
@@ -164,6 +180,7 @@ function renderPostHTML(data, docId) {
     const timeStr = formatTime(data.createdAt);
 
     return `
+        ${replyHTML}
         <div class="post-header-flex">
             <div style="width: 10px; height: 10px; border-radius: 50%; background-color: ${data.color}; box-shadow: 0 0 10px ${data.color};"></div>
             <span class="dosis-text" style="font-size: 0.95rem; color: ${data.color}; font-weight: 700; letter-spacing: 1px;">${data.color}</span>
@@ -181,6 +198,7 @@ document.getElementById('login-btn').addEventListener('click', () => {
         if (pw === ADMIN_PASSWORD) isAdmin = true;
         loginScreen.style.display = 'none';
         threadsScreen.style.display = 'flex';
+        document.getElementById('profile-points-badge').classList.remove('hidden');
         loadThreads();
     } else { document.getElementById('login-error').style.display = 'block'; }
 });
@@ -321,7 +339,7 @@ function openThread(threadId, title, desc) {
                 if (change.type === "added") addedNew = true;
                 
                 let div = document.getElementById(`post-${docId}`);
-                let wasRevealed = false; // PAMIĘĆ ZDJĘCIA
+                let wasRevealed = false; 
                 
                 if (div) {
                     const imgWrap = div.querySelector('.img-wrapper');
@@ -366,6 +384,8 @@ document.getElementById('back-btn').addEventListener('click', () => {
     if (unsubscribeTyping) unsubscribeTyping();
     if (unsubscribePresence) unsubscribePresence();
     currentThreadId = null;
+    replyingTo = null;
+    document.getElementById('replying-banner').classList.add('hidden');
 });
 
 let typingTimeout;
@@ -375,6 +395,11 @@ document.getElementById('new-post-content').addEventListener('input', () => {
     setDoc(doc(db, `threads/${currentThreadId}/typing`, myUserId), { color, time: Date.now() });
     clearTimeout(typingTimeout);
     typingTimeout = setTimeout(() => { deleteDoc(doc(db, `threads/${currentThreadId}/typing`, myUserId)); }, 2000);
+});
+
+document.getElementById('cancel-reply-btn').addEventListener('click', () => {
+    replyingTo = null;
+    document.getElementById('replying-banner').classList.add('hidden');
 });
 
 document.getElementById('toggle-poll-btn').addEventListener('click', () => { document.getElementById('poll-creator').classList.toggle('hidden'); });
@@ -390,7 +415,7 @@ document.getElementById('image-upload').addEventListener('change', (e) => {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
         const img = new Image();
         img.onload = async () => {
             const canvas = document.createElement('canvas');
@@ -404,9 +429,19 @@ document.getElementById('image-upload').addEventListener('change', (e) => {
             const dataUrl = canvas.toDataURL('image/jpeg', 0.6); 
 
             const color = generateColor(myUserId, currentThreadId);
-            await addDoc(collection(db, "threads", currentThreadId, "posts"), {
-                type: 'image', imageUrl: dataUrl, color, userAgent: myUserAgent, createdAt: serverTimestamp(), reactions: {}
-            });
+            const postData = {
+                type: 'image', imageUrl: dataUrl, color, authorId: myUserId, userAgent: myUserAgent, createdAt: serverTimestamp(), reactions: {}
+            };
+            if (replyingTo) {
+                postData.replyTo = { id: replyingTo.id, color: replyingTo.color, text: replyingTo.text || '', type: replyingTo.type };
+                if (replyingTo.authorId && replyingTo.authorId !== myUserId) {
+                    await setDoc(doc(db, "users", replyingTo.authorId), { points: increment(2) }, { merge: true });
+                }
+                replyingTo = null;
+                document.getElementById('replying-banner').classList.add('hidden');
+            }
+
+            await addDoc(collection(db, "threads", currentThreadId, "posts"), postData);
             await updateDoc(doc(db, "threads", currentThreadId), { updatedAt: serverTimestamp() });
             setTimeout(() => { postsList.scrollTop = postsList.scrollHeight; }, 100);
         };
@@ -430,10 +465,20 @@ document.getElementById('send-poll-btn').addEventListener('click', async () => {
     }
     
     const color = generateColor(myUserId, currentThreadId);
-    await addDoc(collection(db, "threads", currentThreadId, "posts"), {
-        type: 'poll', color, userAgent: myUserAgent, createdAt: serverTimestamp(), reactions: {},
+    const postData = {
+        type: 'poll', color, authorId: myUserId, userAgent: myUserAgent, createdAt: serverTimestamp(), reactions: {}, voters: [],
         poll: { question: q, options: opts }
-    });
+    };
+    if (replyingTo) {
+        postData.replyTo = { id: replyingTo.id, color: replyingTo.color, text: replyingTo.text || '', type: replyingTo.type };
+        if (replyingTo.authorId && replyingTo.authorId !== myUserId) {
+            await setDoc(doc(db, "users", replyingTo.authorId), { points: increment(2) }, { merge: true });
+        }
+        replyingTo = null;
+        document.getElementById('replying-banner').classList.add('hidden');
+    }
+
+    await addDoc(collection(db, "threads", currentThreadId, "posts"), postData);
     
     document.getElementById('poll-question').value = '';
     [1,2,3,4].forEach(i => document.getElementById(`poll-opt${i}`).value = '');
@@ -449,9 +494,20 @@ document.getElementById('send-post-btn').addEventListener('click', async () => {
     if (input.value.trim() === '') return;
     
     const color = generateColor(myUserId, currentThreadId);
-    await addDoc(collection(db, "threads", currentThreadId, "posts"), {
-        type: 'text', text: input.value, color, userAgent: myUserAgent, createdAt: serverTimestamp(), reactions: {}
-    });
+    const postData = {
+        type: 'text', text: input.value, color, authorId: myUserId, userAgent: myUserAgent, createdAt: serverTimestamp(), reactions: {}
+    };
+    
+    if (replyingTo) {
+        postData.replyTo = { id: replyingTo.id, color: replyingTo.color, text: replyingTo.text || '', type: replyingTo.type };
+        if (replyingTo.authorId && replyingTo.authorId !== myUserId) {
+            await setDoc(doc(db, "users", replyingTo.authorId), { points: increment(2) }, { merge: true });
+        }
+        replyingTo = null;
+        document.getElementById('replying-banner').classList.add('hidden');
+    }
+
+    await addDoc(collection(db, "threads", currentThreadId, "posts"), postData);
     input.value = ''; 
 
     await updateDoc(doc(db, "threads", currentThreadId), { updatedAt: serverTimestamp() });
@@ -459,7 +515,6 @@ document.getElementById('send-post-btn').addEventListener('click', async () => {
 });
 
 document.addEventListener('click', async (e) => {
-    // --- AKCJE ADMINA ---
     const deleteBtn = e.target.closest('.admin-delete-btn');
     if (deleteBtn) {
         const id = deleteBtn.getAttribute('data-id');
@@ -511,19 +566,36 @@ document.addEventListener('click', async (e) => {
         const id = addBtn.getAttribute('data-id');
         const menu = document.createElement('div');
         menu.className = 'reaction-menu';
-        menu.innerHTML = `
-            <span data-id="${id}" data-emo="❤️">❤️</span>
-            <span data-id="${id}" data-emo="👍">👍</span>
-            <span data-id="${id}" data-emo="😂">😂</span>
-            <span data-id="${id}" data-emo="👎">👎</span>
-            <span data-id="${id}" data-emo="❓">❓</span>
-        `;
+        
+        let emojisHTML = `<button class="reaction-menu-reply-btn" data-reply-id="${id}">Odpowiedz na wiadomość</button>`;
+        AVAILABLE_EMOJIS.forEach(emo => {
+            emojisHTML += `<span data-id="${id}" data-emo="${emo}">${emo}</span>`;
+        });
+        menu.innerHTML = emojisHTML;
         
         const parentBox = addBtn.closest('.thread-item') || addBtn.closest('.post-item');
         if (parentBox) parentBox.style.zIndex = '100';
         
         addBtn.parentElement.parentElement.appendChild(menu);
         return; 
+    }
+
+    const replyActionBtn = e.target.closest('.reaction-menu-reply-btn');
+    if (replyActionBtn) {
+        const postId = replyActionBtn.getAttribute('data-reply-id');
+        const postDiv = document.getElementById(`post-${postId}`);
+        // Pobieramy dane wiadomości do odpowiedzi
+        const postRef = doc(db, "threads", currentThreadId, "posts", postId);
+        const docSnap = await getDoc(postRef);
+        if (docSnap.exists()) {
+            replyingTo = { id: postId, ...docSnap.data() };
+            const banner = document.getElementById('replying-banner');
+            const bannerText = document.getElementById('replying-text');
+            bannerText.innerHTML = `Odpowiadasz dla: <span style="color:${replyingTo.color}">${replyingTo.color}</span>`;
+            banner.classList.remove('hidden');
+        }
+        closeReactionMenu();
+        return;
     }
 
     const emoTarget = e.target.closest('.reaction-menu span') || e.target.closest('.reaction-badge');
@@ -537,8 +609,16 @@ document.addEventListener('click', async (e) => {
         const isBadgeAndActive = emoTarget.classList.contains('active');
         
         try {
-            if (isBadgeAndActive) await updateDoc(ref, { [updateField]: arrayRemove(myUserId) });
-            else await updateDoc(ref, { [updateField]: arrayUnion(myUserId) });
+            if (isBadgeAndActive) {
+                await updateDoc(ref, { [updateField]: arrayRemove(myUserId) });
+            } else {
+                await updateDoc(ref, { [updateField]: arrayUnion(myUserId) });
+                // Przyznawanie punktów autorowi za reakcję
+                const docSnap = await getDoc(ref);
+                if (docSnap.exists() && docSnap.data().authorId && docSnap.data().authorId !== myUserId) {
+                    await setDoc(doc(db, "users", docSnap.data().authorId), { points: increment(1) }, { merge: true });
+                }
+            }
         } catch(err) { console.error("Error", err); }
         
         closeReactionMenu();
