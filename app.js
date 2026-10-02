@@ -633,8 +633,14 @@ document.addEventListener('click', async (e) => {
         try {
             if (isBadgeAndActive) {
                 await updateDoc(ref, { [updateField]: arrayRemove(myUserId) });
+                // ODBIERANIE PUNKTU
+                const docSnap = await getDoc(ref);
+                if (docSnap.exists() && docSnap.data().authorId && docSnap.data().authorId !== myUserId) {
+                    await setDoc(doc(db, "users", docSnap.data().authorId), { points: increment(-1) }, { merge: true });
+                }
             } else {
                 await updateDoc(ref, { [updateField]: arrayUnion(myUserId) });
+                // DODAWANIE PUNKTU
                 const docSnap = await getDoc(ref);
                 if (docSnap.exists() && docSnap.data().authorId && docSnap.data().authorId !== myUserId) {
                     await setDoc(doc(db, "users", docSnap.data().authorId), { points: increment(1) }, { merge: true });
